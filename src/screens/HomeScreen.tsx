@@ -9,11 +9,13 @@ const TEXT = '#282828';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const IS_COMPACT = SCREEN_WIDTH < 390;
-const CONTENT_PADDING = IS_COMPACT ? 16 : 20;
-const PHOTO_SIZE = Math.min(200, Math.max(170, SCREEN_WIDTH * 0.47));
-const PHOTO_BORDER = IS_COMPACT ? 16 : 18;
-const PLANT_CARD_WIDTH = Math.min(188, Math.max(172, SCREEN_WIDTH * 0.46));
-const HEADER_HEIGHT = IS_COMPACT ? 246 : 266;
+const CONTENT_PADDING = IS_COMPACT ? 14 : 20;
+const PHOTO_SIZE = Math.min(206, Math.max(158, SCREEN_WIDTH * 0.44));
+const PHOTO_BORDER = IS_COMPACT ? 13 : 18;
+const PLANT_CARD_WIDTH = IS_COMPACT
+  ? Math.min(184, Math.max(174, SCREEN_WIDTH * 0.48))
+  : Math.min(218, Math.max(198, SCREEN_WIDTH * 0.53));
+const HEADER_HEIGHT = IS_COMPACT ? 250 : 266;
 
 function BrandHeader() {
   return (
@@ -46,6 +48,19 @@ function WaterToggle({ isEnabled, onPress }: { isEnabled: boolean; onPress: () =
   );
 }
 
+function GearIcon() {
+  return (
+    <View style={styles.gearIcon}>
+      <View style={styles.gearRing} />
+      <View style={styles.gearCenter} />
+      <View style={[styles.gearSpoke, styles.gearSpokeVertical]} />
+      <View style={[styles.gearSpoke, styles.gearSpokeHorizontal]} />
+      <View style={[styles.gearSpoke, styles.gearSpokeDiagonalRight]} />
+      <View style={[styles.gearSpoke, styles.gearSpokeDiagonalLeft]} />
+    </View>
+  );
+}
+
 function PlantCard({
   name,
   species,
@@ -61,19 +76,19 @@ function PlantCard({
 }) {
   return (
     <View style={styles.plantCard}>
-      <Text style={styles.plantName}>{name}</Text>
+      <Text style={styles.plantName} numberOfLines={1}>{name}</Text>
       <View style={styles.divider} />
       <View style={styles.speciesPill}>
-        <Text style={styles.speciesText}>⚚ {species}</Text>
+        <Text style={styles.speciesText} numberOfLines={1}>⚚ {species}</Text>
       </View>
-      <Text style={styles.updatedText}>◷ Atualizado há {updatedMinutes} min</Text>
+      <Text style={styles.updatedText} numberOfLines={1}>◷ Atualizado há {updatedMinutes} min</Text>
       <View style={styles.toggleRow}>
-        <View>
+        <View style={styles.toggleGroup}>
           <WaterToggle isEnabled={automaticWatering} onPress={onToggle} />
-          <Text style={styles.toggleLabel}>Rega Automática</Text>
+          <Text style={styles.toggleLabel} numberOfLines={1}>Rega Automática</Text>
         </View>
         <Pressable accessibilityRole="button" style={styles.settingsButton}>
-          <Text style={styles.settingsIcon}>⚙</Text>
+          <GearIcon />
         </Pressable>
       </View>
     </View>
@@ -169,7 +184,7 @@ const styles = StyleSheet.create({
     height: HEADER_HEIGHT,
     backgroundColor: GREEN,
     paddingHorizontal: IS_COMPACT ? 32 : 40,
-    paddingTop: IS_COMPACT ? 38 : 58,
+    paddingTop: IS_COMPACT ? 42 : 58,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between'
@@ -216,10 +231,10 @@ const styles = StyleSheet.create({
   },
   contentArea: {
     paddingHorizontal: CONTENT_PADDING,
-    marginTop: -(PHOTO_SIZE / 2 + 12)
+    marginTop: -(PHOTO_SIZE * 0.25)
   },
   heroRow: {
-    minHeight: PHOTO_SIZE + 108,
+    minHeight: PHOTO_SIZE + (IS_COMPACT ? 112 : 108),
     flexDirection: 'row',
     alignItems: 'flex-start'
   },
@@ -243,12 +258,12 @@ const styles = StyleSheet.create({
   },
   plantCard: {
     width: PLANT_CARD_WIDTH,
-    minHeight: IS_COMPACT ? 208 : 220,
-    marginLeft: -4,
+    minHeight: IS_COMPACT ? 148 : 206,
+    marginLeft: IS_COMPACT ? 8 : -8,
     marginRight: 0,
-    marginTop: PHOTO_SIZE * 0.52,
-    paddingVertical: IS_COMPACT ? 18 : 22,
-    paddingHorizontal: IS_COMPACT ? 14 : 18,
+    marginTop: PHOTO_SIZE * (IS_COMPACT ? 0.44 : 0.5),
+    paddingVertical: IS_COMPACT ? 11 : 22,
+    paddingHorizontal: IS_COMPACT ? 12 : 18,
     borderRadius: 22,
     backgroundColor: '#ffffff',
     alignItems: 'center',
@@ -260,7 +275,7 @@ const styles = StyleSheet.create({
   },
   plantName: {
     color: TEXT,
-    fontSize: IS_COMPACT ? 25 : 28,
+    fontSize: IS_COMPACT ? 22 : 28,
     fontWeight: '800',
     letterSpacing: -0.6
   },
@@ -268,23 +283,29 @@ const styles = StyleSheet.create({
     width: '88%',
     height: 1,
     backgroundColor: '#e8e8e8',
-    marginVertical: 7
+    marginVertical: IS_COMPACT ? 4 : 7
   },
   speciesPill: {
     borderRadius: 28,
     backgroundColor: GREEN,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    marginBottom: 14
+    paddingHorizontal: IS_COMPACT ? 11 : 14,
+    paddingVertical: IS_COMPACT ? 3 : 5,
+    marginBottom: IS_COMPACT ? 8 : 14
   },
   speciesText: {
     color: '#ffffff',
-    fontSize: IS_COMPACT ? 16 : 18
+    fontSize: IS_COMPACT ? 14 : 18
   },
   updatedText: {
     color: '#555555',
-    fontSize: IS_COMPACT ? 15 : 17,
-    marginBottom: IS_COMPACT ? 12 : 14
+    width: '100%',
+    fontSize: IS_COMPACT ? 12 : 17,
+    marginBottom: IS_COMPACT ? 8 : 14,
+    textAlign: 'center'
+  },
+  toggleGroup: {
+    width: IS_COMPACT ? 106 : 130,
+    alignItems: 'center'
   },
   toggleRow: {
     width: '100%',
@@ -293,8 +314,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   toggleTrack: {
-    width: IS_COMPACT ? 88 : 98,
-    height: IS_COMPACT ? 44 : 50,
+    width: IS_COMPACT ? 74 : 98,
+    height: IS_COMPACT ? 36 : 50,
     borderRadius: 30,
     backgroundColor: '#696969',
     padding: 5,
@@ -304,9 +325,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1085da'
   },
   toggleThumb: {
-    width: IS_COMPACT ? 34 : 40,
-    height: IS_COMPACT ? 34 : 40,
-    borderRadius: IS_COMPACT ? 17 : 20,
+    width: IS_COMPACT ? 26 : 40,
+    height: IS_COMPACT ? 26 : 40,
+    borderRadius: IS_COMPACT ? 13 : 20,
     backgroundColor: '#9d9d9d',
     alignItems: 'center',
     justifyContent: 'center'
@@ -316,7 +337,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff'
   },
   toggleDrop: {
-    fontSize: IS_COMPACT ? 21 : 24,
+    fontSize: IS_COMPACT ? 16 : 24,
     opacity: 0.35
   },
   toggleDropEnabled: {
@@ -324,21 +345,54 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     color: '#4d4d4d',
-    fontSize: IS_COMPACT ? 16 : 18,
+    fontSize: IS_COMPACT ? 12 : 18,
     marginTop: 3,
     textAlign: 'center'
   },
   settingsButton: {
-    width: IS_COMPACT ? 46 : 52,
-    height: IS_COMPACT ? 46 : 52,
-    borderRadius: IS_COMPACT ? 23 : 26,
+    width: IS_COMPACT ? 36 : 52,
+    height: IS_COMPACT ? 36 : 52,
+    borderRadius: IS_COMPACT ? 18 : 26,
     backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center'
   },
-  settingsIcon: {
-    color: '#ffffff',
-    fontSize: IS_COMPACT ? 27 : 30
+  gearIcon: {
+    width: IS_COMPACT ? 20 : 28,
+    height: IS_COMPACT ? 20 : 28,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  gearRing: {
+    width: IS_COMPACT ? 15 : 22,
+    height: IS_COMPACT ? 15 : 22,
+    borderRadius: IS_COMPACT ? 7.5 : 11,
+    borderWidth: 3,
+    borderColor: '#ffffff'
+  },
+  gearCenter: {
+    position: 'absolute',
+    width: IS_COMPACT ? 4 : 7,
+    height: IS_COMPACT ? 4 : 7,
+    borderRadius: IS_COMPACT ? 2 : 3.5,
+    backgroundColor: '#ffffff'
+  },
+  gearSpoke: {
+    position: 'absolute',
+    width: 3,
+    height: IS_COMPACT ? 20 : 28,
+    borderRadius: 2,
+    backgroundColor: '#ffffff'
+  },
+  gearSpokeVertical: {},
+  gearSpokeHorizontal: {
+    transform: [{ rotate: '90deg' }]
+  },
+  gearSpokeDiagonalRight: {
+    transform: [{ rotate: '45deg' }]
+  },
+  gearSpokeDiagonalLeft: {
+    transform: [{ rotate: '-45deg' }]
   },
   loadingText: {
     marginTop: -10,
