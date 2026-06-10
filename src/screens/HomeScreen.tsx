@@ -1,4 +1,4 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePlantDashboard } from '../hooks/usePlantDashboard';
 import type { SensorReading } from '../types/plant';
 
@@ -6,6 +6,14 @@ const GREEN = '#2d624a';
 const MINT = '#33b884';
 const BACKGROUND = '#eeeeec';
 const TEXT = '#282828';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const IS_COMPACT = SCREEN_WIDTH < 390;
+const CONTENT_PADDING = IS_COMPACT ? 16 : 20;
+const PHOTO_SIZE = Math.min(200, Math.max(170, SCREEN_WIDTH * 0.47));
+const PHOTO_BORDER = IS_COMPACT ? 16 : 18;
+const PLANT_CARD_WIDTH = Math.min(188, Math.max(172, SCREEN_WIDTH * 0.46));
+const HEADER_HEIGHT = IS_COMPACT ? 246 : 266;
 
 function BrandHeader() {
   return (
@@ -158,17 +166,17 @@ const styles = StyleSheet.create({
     backgroundColor: BACKGROUND
   },
   header: {
-    height: 292,
+    height: HEADER_HEIGHT,
     backgroundColor: GREEN,
-    paddingHorizontal: 40,
-    paddingTop: 76,
+    paddingHorizontal: IS_COMPACT ? 32 : 40,
+    paddingTop: IS_COMPACT ? 38 : 58,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between'
   },
   brandText: {
     color: '#ffffff',
-    fontSize: 40,
+    fontSize: IS_COMPACT ? 35 : 40,
     fontWeight: '800',
     letterSpacing: -1.5
   },
@@ -178,11 +186,11 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 22
+    gap: IS_COMPACT ? 16 : 22
   },
   shield: {
-    width: 58,
-    height: 72,
+    width: IS_COMPACT ? 54 : 58,
+    height: IS_COMPACT ? 62 : 72,
     borderWidth: 3,
     borderColor: '#ffffff',
     borderRadius: 16,
@@ -191,11 +199,11 @@ const styles = StyleSheet.create({
   },
   shieldLeaf: {
     color: '#ffffff',
-    fontSize: 34
+    fontSize: IS_COMPACT ? 30 : 34
   },
   menuDots: {
     color: '#ffffff',
-    fontSize: 56,
+    fontSize: IS_COMPACT ? 52 : 56,
     lineHeight: 60,
     marginTop: -8
   },
@@ -207,22 +215,22 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 44
   },
   contentArea: {
-    paddingHorizontal: 20,
-    marginTop: -91
+    paddingHorizontal: CONTENT_PADDING,
+    marginTop: -(PHOTO_SIZE / 2 + 12)
   },
   heroRow: {
-    minHeight: 318,
+    minHeight: PHOTO_SIZE + 108,
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'flex-start'
   },
   photoFrame: {
-    width: 242,
-    height: 242,
-    borderRadius: 121,
-    borderWidth: 24,
+    width: PHOTO_SIZE,
+    height: PHOTO_SIZE,
+    borderRadius: PHOTO_SIZE / 2,
+    borderWidth: PHOTO_BORDER,
     borderColor: '#f7f7f5',
     overflow: 'hidden',
-    marginLeft: -18,
+    marginLeft: -CONTENT_PADDING,
     backgroundColor: '#ffffff'
   },
   plantImage: {
@@ -234,12 +242,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.28)'
   },
   plantCard: {
-    flex: 1,
-    minHeight: 230,
-    marginLeft: -2,
+    width: PLANT_CARD_WIDTH,
+    minHeight: IS_COMPACT ? 208 : 220,
+    marginLeft: -4,
     marginRight: 0,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+    marginTop: PHOTO_SIZE * 0.52,
+    paddingVertical: IS_COMPACT ? 18 : 22,
+    paddingHorizontal: IS_COMPACT ? 14 : 18,
     borderRadius: 22,
     backgroundColor: '#ffffff',
     alignItems: 'center',
@@ -251,7 +260,7 @@ const styles = StyleSheet.create({
   },
   plantName: {
     color: TEXT,
-    fontSize: 32,
+    fontSize: IS_COMPACT ? 25 : 28,
     fontWeight: '800',
     letterSpacing: -0.6
   },
@@ -270,22 +279,22 @@ const styles = StyleSheet.create({
   },
   speciesText: {
     color: '#ffffff',
-    fontSize: 18
+    fontSize: IS_COMPACT ? 16 : 18
   },
   updatedText: {
     color: '#555555',
-    fontSize: 18,
-    marginBottom: 14
+    fontSize: IS_COMPACT ? 15 : 17,
+    marginBottom: IS_COMPACT ? 12 : 14
   },
   toggleRow: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around'
+    justifyContent: 'space-between'
   },
   toggleTrack: {
-    width: 104,
-    height: 52,
+    width: IS_COMPACT ? 88 : 98,
+    height: IS_COMPACT ? 44 : 50,
     borderRadius: 30,
     backgroundColor: '#696969',
     padding: 5,
@@ -295,9 +304,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1085da'
   },
   toggleThumb: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: IS_COMPACT ? 34 : 40,
+    height: IS_COMPACT ? 34 : 40,
+    borderRadius: IS_COMPACT ? 17 : 20,
     backgroundColor: '#9d9d9d',
     alignItems: 'center',
     justifyContent: 'center'
@@ -307,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff'
   },
   toggleDrop: {
-    fontSize: 26,
+    fontSize: IS_COMPACT ? 21 : 24,
     opacity: 0.35
   },
   toggleDropEnabled: {
@@ -315,21 +324,21 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     color: '#4d4d4d',
-    fontSize: 19,
+    fontSize: IS_COMPACT ? 16 : 18,
     marginTop: 3,
     textAlign: 'center'
   },
   settingsButton: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: IS_COMPACT ? 46 : 52,
+    height: IS_COMPACT ? 46 : 52,
+    borderRadius: IS_COMPACT ? 23 : 26,
     backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center'
   },
   settingsIcon: {
     color: '#ffffff',
-    fontSize: 31
+    fontSize: IS_COMPACT ? 27 : 30
   },
   loadingText: {
     marginTop: -10,
@@ -338,10 +347,10 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   statusCard: {
-    marginHorizontal: 20,
+    marginHorizontal: CONTENT_PADDING,
     borderRadius: 22,
     backgroundColor: '#ffffff',
-    paddingHorizontal: 24,
+    paddingHorizontal: IS_COMPACT ? 16 : 24,
     paddingTop: 14,
     paddingBottom: 22,
     shadowColor: '#000000',
@@ -357,7 +366,7 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     color: '#000000',
-    fontSize: 33,
+    fontSize: IS_COMPACT ? 30 : 33,
     fontWeight: '500'
   },
   healthRow: {
@@ -366,14 +375,14 @@ const styles = StyleSheet.create({
     gap: 8
   },
   healthDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: IS_COMPACT ? 8 : 10,
+    height: IS_COMPACT ? 8 : 10,
+    borderRadius: IS_COMPACT ? 4 : 5,
     backgroundColor: '#47b466'
   },
   healthText: {
     color: '#47aa60',
-    fontSize: 24
+    fontSize: IS_COMPACT ? 22 : 24
   },
   statusDivider: {
     height: 1,
@@ -391,24 +400,24 @@ const styles = StyleSheet.create({
     position: 'relative'
   },
   sensorIcon: {
-    fontSize: 43,
-    height: 52,
+    fontSize: IS_COMPACT ? 34 : 40,
+    height: IS_COMPACT ? 44 : 50,
     marginBottom: 4,
     textAlign: 'center'
   },
   sensorValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7
+    gap: IS_COMPACT ? 4 : 6
   },
   sensorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5
+    width: IS_COMPACT ? 8 : 10,
+    height: IS_COMPACT ? 8 : 10,
+    borderRadius: IS_COMPACT ? 4 : 5
   },
   sensorValue: {
     color: '#0a0a0a',
-    fontSize: 28,
+    fontSize: IS_COMPACT ? 23 : 26,
     fontWeight: '400'
   },
   sensorSeparator: {
@@ -416,7 +425,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 10,
     width: 1,
-    height: 72,
+    height: IS_COMPACT ? 62 : 72,
     backgroundColor: '#ececec'
   },
   bottomNav: {
