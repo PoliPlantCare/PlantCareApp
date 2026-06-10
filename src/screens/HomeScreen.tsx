@@ -16,7 +16,7 @@ const PHOTO_BORDER = IS_COMPACT ? 13 : 18;
 const PLANT_CARD_WIDTH = IS_COMPACT
   ? Math.min(184, Math.max(174, SCREEN_WIDTH * 0.48))
   : Math.min(218, Math.max(198, SCREEN_WIDTH * 0.53));
-const HEADER_HEIGHT = IS_COMPACT ? 156 : 176;
+const HEADER_HEIGHT = IS_COMPACT ? 132 : 156;
 const BOTTOM_NAV_HEIGHT = IS_COMPACT ? 84 : 100;
 type TabName = 'home' | 'plants';
 
@@ -361,10 +361,10 @@ const styles = StyleSheet.create({
   },
   contentArea: {
     paddingHorizontal: CONTENT_PADDING,
-    marginTop: -(PHOTO_SIZE * 0.25)
+    marginTop: -(PHOTO_SIZE * 0.38)
   },
   heroRow: {
-    minHeight: PHOTO_SIZE + (IS_COMPACT ? 112 : 108),
+    minHeight: PHOTO_SIZE + (IS_COMPACT ? 112 : 114),
     flexDirection: 'row',
     alignItems: 'flex-end'
   },
@@ -536,6 +536,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: '#ffffff',
     paddingHorizontal: IS_COMPACT ? 16 : 24,
+    marginTop: IS_COMPACT ? 30 : 36,
     paddingTop: 14,
     paddingBottom: 22,
     shadowColor: '#000000',
