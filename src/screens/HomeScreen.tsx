@@ -16,7 +16,8 @@ const PHOTO_BORDER = IS_COMPACT ? 13 : 18;
 const PLANT_CARD_WIDTH = IS_COMPACT
   ? Math.min(184, Math.max(174, SCREEN_WIDTH * 0.48))
   : Math.min(218, Math.max(198, SCREEN_WIDTH * 0.53));
-const HEADER_HEIGHT = IS_COMPACT ? 250 : 266;
+const HEADER_HEIGHT = IS_COMPACT ? 176 : 194;
+const BOTTOM_NAV_HEIGHT = IS_COMPACT ? 84 : 100;
 type TabName = 'home' | 'plants';
 
 function BrandHeader() {
@@ -132,16 +133,36 @@ function StatusCard({ sensors, healthLabel }: { sensors: SensorReading[]; health
   );
 }
 
+function HomeNavIcon({ active }: { active: boolean }) {
+  return (
+    <View style={styles.homeIconWrap}>
+      <View style={[styles.homeIconRoof, active && styles.navShapeFilled]} />
+      <View style={[styles.homeIconBody, active && styles.navShapeFilled]}>
+        <View style={[styles.homeIconDoor, active && styles.homeIconDoorActive]} />
+      </View>
+    </View>
+  );
+}
+
+function PlantNavIcon({ active }: { active: boolean }) {
+  return (
+    <View style={styles.plantIconWrap}>
+      <View style={[styles.plantLeaf, styles.plantLeafTop, active && styles.navShapeFilled]} />
+      <View style={[styles.plantLeaf, styles.plantLeafLeft, active && styles.navShapeFilled]} />
+      <View style={[styles.plantLeaf, styles.plantLeafRight, active && styles.navShapeFilled]} />
+      <View style={[styles.plantStem, active && styles.navShapeFilled]} />
+    </View>
+  );
+}
+
 function BottomNav({ activeTab, onChangeTab }: { activeTab: TabName; onChangeTab: (tab: TabName) => void }) {
   return (
     <View style={styles.bottomNav}>
       <Pressable accessibilityRole="button" onPress={() => onChangeTab('home')} style={styles.navButton}>
-        <Text style={[styles.navIcon, activeTab === 'home' && styles.navIconActive]}>⌂</Text>
+        <HomeNavIcon active={activeTab === 'home'} />
       </Pressable>
       <Pressable accessibilityRole="button" onPress={() => onChangeTab('plants')} style={styles.navButton}>
-        <Text style={[styles.navIcon, activeTab === 'plants' && styles.navIconActive]}>
-          {activeTab === 'plants' ? '♣' : '♧'}
-        </Text>
+        <PlantNavIcon active={activeTab === 'plants'} />
       </Pressable>
     </View>
   );
@@ -157,27 +178,29 @@ function DashboardContent({
   toggleAutomaticWatering: () => void;
 }) {
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+    <View style={styles.dashboardRoot}>
       <BrandHeader />
-      <View style={styles.heroCurve} />
-      <View style={styles.contentArea}>
-        <View style={styles.heroRow}>
-          <View style={styles.photoFrame}>
-            <Image source={{ uri: plant.imageUrl }} style={styles.plantImage} />
-            <View style={styles.photoOverlay} />
+      <ScrollView style={styles.screenScroll} contentContainerStyle={styles.scrollContent} bounces={false}>
+        <View style={styles.heroCurve} />
+        <View style={styles.contentArea}>
+          <View style={styles.heroRow}>
+            <View style={styles.photoFrame}>
+              <Image source={{ uri: plant.imageUrl }} style={styles.plantImage} />
+              <View style={styles.photoOverlay} />
+            </View>
+            <PlantCard
+              name={plant.name}
+              species={plant.species}
+              updatedMinutes={plant.lastUpdatedMinutes}
+              automaticWatering={plant.automaticWatering}
+              onToggle={toggleAutomaticWatering}
+            />
           </View>
-          <PlantCard
-            name={plant.name}
-            species={plant.species}
-            updatedMinutes={plant.lastUpdatedMinutes}
-            automaticWatering={plant.automaticWatering}
-            onToggle={toggleAutomaticWatering}
-          />
+          {isLoading && <Text style={styles.loadingText}>Sincronizando com o Supabase...</Text>}
+          <StatusCard sensors={plant.sensors} healthLabel={plant.healthLabel} />
         </View>
-        {isLoading && <Text style={styles.loadingText}>Sincronizando com o Supabase...</Text>}
-        <StatusCard sensors={plant.sensors} healthLabel={plant.healthLabel} />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -216,8 +239,8 @@ function PlantListItem({ plant }: { plant: PlantDashboard }) {
 function PlantsContent({ plants }: { plants: PlantDashboard[] }) {
   return (
     <View style={styles.plantsRoot}>
-      <ScrollView contentContainerStyle={styles.plantsScrollContent} bounces={false}>
-        <BrandHeader />
+      <BrandHeader />
+      <ScrollView style={styles.screenScroll} contentContainerStyle={styles.plantsScrollContent} bounces={false}>
         <View style={styles.plantsHeaderArea}>
           <Text style={styles.plantsTitle}>Suas Plantas</Text>
           <View style={styles.searchBar}>
@@ -275,9 +298,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BACKGROUND
   },
+  dashboardRoot: {
+    flex: 1,
+    backgroundColor: BACKGROUND
+  },
+  screenScroll: {
+    flex: 1
+  },
   scrollContent: {
-    minHeight: '100%',
-    paddingBottom: 126,
+    flexGrow: 1,
+    paddingBottom: BOTTOM_NAV_HEIGHT + 26,
     backgroundColor: BACKGROUND
   },
   header: {
@@ -588,7 +618,8 @@ const styles = StyleSheet.create({
     backgroundColor: BACKGROUND
   },
   plantsScrollContent: {
-    paddingBottom: 132,
+    flexGrow: 1,
+    paddingBottom: BOTTOM_NAV_HEIGHT + 84,
     backgroundColor: BACKGROUND
   },
   plantsHeaderArea: {
@@ -728,7 +759,7 @@ const styles = StyleSheet.create({
   },
   scrollTopButton: {
     position: 'absolute',
-    bottom: IS_COMPACT ? 56 : 106,
+    bottom: BOTTOM_NAV_HEIGHT + (IS_COMPACT ? 16 : 24),
     alignSelf: 'center',
     width: IS_COMPACT ? 22 : 54,
     height: IS_COMPACT ? 22 : 54,
@@ -744,8 +775,8 @@ const styles = StyleSheet.create({
   },
   addPlantButton: {
     position: 'absolute',
-    right: IS_COMPACT ? 14 : 28,
-    bottom: IS_COMPACT ? 54 : 112,
+    right: IS_COMPACT ? 18 : 28,
+    bottom: BOTTOM_NAV_HEIGHT + (IS_COMPACT ? 18 : 26),
     width: IS_COMPACT ? 42 : 110,
     height: IS_COMPACT ? 42 : 110,
     borderRadius: IS_COMPACT ? 21 : 55,
@@ -775,20 +806,88 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 100,
+    height: BOTTOM_NAV_HEIGHT,
     backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around'
   },
-  navIconActive: {
-    color: '#454545',
-    fontSize: 62,
-    fontWeight: '800'
+  homeIconWrap: {
+    width: IS_COMPACT ? 48 : 62,
+    height: IS_COMPACT ? 48 : 62,
+    alignItems: 'center',
+    justifyContent: 'flex-end'
   },
-  navIcon: {
-    color: '#454545',
-    fontSize: 58,
-    fontWeight: '800'
+  homeIconRoof: {
+    width: IS_COMPACT ? 31 : 40,
+    height: IS_COMPACT ? 31 : 40,
+    borderLeftWidth: IS_COMPACT ? 5 : 7,
+    borderTopWidth: IS_COMPACT ? 5 : 7,
+    borderColor: '#454545',
+    transform: [{ rotate: '45deg' }],
+    marginBottom: IS_COMPACT ? -18 : -24,
+    backgroundColor: '#ffffff'
+  },
+  homeIconBody: {
+    width: IS_COMPACT ? 38 : 48,
+    height: IS_COMPACT ? 30 : 38,
+    borderWidth: IS_COMPACT ? 5 : 7,
+    borderTopWidth: 0,
+    borderColor: '#454545',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'flex-end'
+  },
+  homeIconDoor: {
+    width: IS_COMPACT ? 10 : 12,
+    height: IS_COMPACT ? 15 : 20,
+    borderLeftWidth: 3,
+    borderRightWidth: 3,
+    borderTopWidth: 3,
+    borderColor: '#454545',
+    backgroundColor: '#ffffff'
+  },
+  homeIconDoorActive: {
+    borderColor: '#ffffff'
+  },
+  plantIconWrap: {
+    width: IS_COMPACT ? 58 : 74,
+    height: IS_COMPACT ? 58 : 74,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  plantLeaf: {
+    position: 'absolute',
+    width: IS_COMPACT ? 31 : 40,
+    height: IS_COMPACT ? 31 : 40,
+    borderRadius: IS_COMPACT ? 16 : 20,
+    borderWidth: IS_COMPACT ? 5 : 7,
+    borderColor: '#454545',
+    backgroundColor: '#ffffff'
+  },
+  plantLeafTop: {
+    top: IS_COMPACT ? 2 : 0,
+    left: IS_COMPACT ? 14 : 17
+  },
+  plantLeafLeft: {
+    left: IS_COMPACT ? 3 : 5,
+    top: IS_COMPACT ? 20 : 25
+  },
+  plantLeafRight: {
+    right: IS_COMPACT ? 3 : 5,
+    top: IS_COMPACT ? 20 : 25
+  },
+  plantStem: {
+    position: 'absolute',
+    bottom: IS_COMPACT ? 4 : 2,
+    width: IS_COMPACT ? 8 : 10,
+    height: IS_COMPACT ? 26 : 34,
+    borderRadius: 6,
+    borderWidth: IS_COMPACT ? 4 : 5,
+    borderColor: '#454545',
+    backgroundColor: '#ffffff'
+  },
+  navShapeFilled: {
+    backgroundColor: '#454545'
   }
 });
