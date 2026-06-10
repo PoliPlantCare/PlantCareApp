@@ -5,6 +5,12 @@ import type { PlantDashboard, SensorReading } from '../types/plant';
 const DEFAULT_IMAGE_URL =
   'https://images.unsplash.com/photo-1610397648930-477b8c7f0943?q=80&w=900&auto=format&fit=crop';
 
+const JIBOIA_IMAGE_URL =
+  'https://images.unsplash.com/photo-1600411832986-5a4477b64a1c?q=80&w=900&auto=format&fit=crop';
+
+const MARGARIDA_IMAGE_URL =
+  'https://images.unsplash.com/photo-1597848212624-a19eb35e2651?q=80&w=900&auto=format&fit=crop';
+
 const fallbackPlant: PlantDashboard = {
   id: 'demo-orquidea',
   name: 'Sua Planta',
@@ -20,6 +26,31 @@ const fallbackPlant: PlantDashboard = {
     { label: 'Temperatura', value: '24°C', icon: '♨', color: '#a80d12', status: 'good' }
   ]
 };
+
+const fallbackPlants: PlantDashboard[] = [
+  fallbackPlant,
+  {
+    ...fallbackPlant,
+    id: 'demo-jiboia',
+    name: 'Outra Planta',
+    species: 'Jibóia',
+    imageUrl: JIBOIA_IMAGE_URL
+  },
+  {
+    ...fallbackPlant,
+    id: 'demo-margarida-1',
+    name: 'Exemplo 1',
+    species: 'Margarida',
+    imageUrl: MARGARIDA_IMAGE_URL
+  },
+  {
+    ...fallbackPlant,
+    id: 'demo-margarida-2',
+    name: 'Exemplo 2',
+    species: 'Margarida',
+    imageUrl: MARGARIDA_IMAGE_URL
+  }
+];
 
 type PlantRecord = {
   id: string;
@@ -99,18 +130,56 @@ const buildSensors = (readings: ReadingRecord[]): SensorReading[] => {
   ];
 };
 
+
+const imageForSpecies = (species: string, imageUrl?: string | null) => {
+  if (imageUrl) {
+    return imageUrl;
+  }
+
+  const normalizedSpecies = species.toLowerCase();
+  if (normalizedSpecies.includes('jib')) {
+    return JIBOIA_IMAGE_URL;
+  }
+  if (normalizedSpecies.includes('margarida')) {
+    return MARGARIDA_IMAGE_URL;
+  }
+
+  return DEFAULT_IMAGE_URL;
+};
+
+const plantDashboardFromRecord = (plantRecord: PlantRecord, readings: ReadingRecord[] = []): PlantDashboard => {
+  const name = plantRecord.nome ?? plantRecord.name ?? fallbackPlant.name;
+  const species = plantRecord.especie ?? plantRecord.species ?? fallbackPlant.species;
+  const latestCreatedAt = readings[0]?.created_at;
+
+  return {
+    id: plantRecord.id,
+    name,
+    species,
+    automaticWatering:
+      plantRecord.rega_automatica ?? plantRecord.automatic_watering ?? fallbackPlant.automaticWatering,
+    imageUrl: imageForSpecies(species, plantRecord.image_url),
+    lastUpdatedMinutes: formatElapsedMinutes(latestCreatedAt),
+    healthLabel: 'Saudável',
+    sensors: buildSensors(readings)
+  };
+};
+
 export function usePlantDashboard() {
   const [plant, setPlant] = useState<PlantDashboard>(fallbackPlant);
+  const [plants, setPlants] = useState<PlantDashboard[]>(fallbackPlants);
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
 
-    const { data: plants } = await supabase.from('plantas').select('*').limit(1);
-    const plantRecord = plants?.[0] as PlantRecord | undefined;
+    const { data: plantRecords } = await supabase.from('plantas').select('*').limit(50);
+    const parsedPlantRecords = (plantRecords ?? []) as PlantRecord[];
+    const plantRecord = parsedPlantRecords[0];
 
     if (!plantRecord) {
       setPlant(fallbackPlant);
+      setPlants(fallbackPlants);
       setIsLoading(false);
       return;
     }
@@ -122,19 +191,10 @@ export function usePlantDashboard() {
       .limit(24);
 
     const latestReadings = (readings ?? []) as ReadingRecord[];
-    const latestCreatedAt = latestReadings[0]?.created_at;
+    const dashboardPlant = plantDashboardFromRecord(plantRecord, latestReadings);
 
-    setPlant({
-      id: plantRecord.id,
-      name: plantRecord.nome ?? plantRecord.name ?? fallbackPlant.name,
-      species: plantRecord.especie ?? plantRecord.species ?? fallbackPlant.species,
-      automaticWatering:
-        plantRecord.rega_automatica ?? plantRecord.automatic_watering ?? fallbackPlant.automaticWatering,
-      imageUrl: plantRecord.image_url ?? fallbackPlant.imageUrl,
-      lastUpdatedMinutes: formatElapsedMinutes(latestCreatedAt),
-      healthLabel: 'Saudável',
-      sensors: buildSensors(latestReadings)
-    });
+    setPlant(dashboardPlant);
+    setPlants(parsedPlantRecords.map((record, index) => plantDashboardFromRecord(record, index === 0 ? latestReadings : [])));
 
     setIsLoading(false);
   }, []);
@@ -156,6 +216,11 @@ export function usePlantDashboard() {
   const toggleAutomaticWatering = useCallback(async () => {
     const nextValue = !plant.automaticWatering;
     setPlant((currentPlant) => ({ ...currentPlant, automaticWatering: nextValue }));
+    setPlants((currentPlants) =>
+      currentPlants.map((currentPlant) =>
+        currentPlant.id === plant.id ? { ...currentPlant, automaticWatering: nextValue } : currentPlant
+      )
+    );
 
     if (plant.id === fallbackPlant.id) {
       return;
@@ -168,11 +233,16 @@ export function usePlantDashboard() {
 
     if (error) {
       setPlant((currentPlant) => ({ ...currentPlant, automaticWatering: !nextValue }));
+      setPlants((currentPlants) =>
+        currentPlants.map((currentPlant) =>
+          currentPlant.id === plant.id ? { ...currentPlant, automaticWatering: !nextValue } : currentPlant
+        )
+      );
     }
   }, [plant.automaticWatering, plant.id]);
 
   return useMemo(
-    () => ({ plant, isLoading, refresh, toggleAutomaticWatering }),
-    [plant, isLoading, refresh, toggleAutomaticWatering]
+    () => ({ plant, plants, isLoading, refresh, toggleAutomaticWatering }),
+    [plant, plants, isLoading, refresh, toggleAutomaticWatering]
   );
 }

@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePlantDashboard } from '../hooks/usePlantDashboard';
-import type { SensorReading } from '../types/plant';
+import type { PlantDashboard, SensorReading } from '../types/plant';
 
 const GREEN = '#2d624a';
 const MINT = '#33b884';
@@ -16,6 +17,7 @@ const PLANT_CARD_WIDTH = IS_COMPACT
   ? Math.min(184, Math.max(174, SCREEN_WIDTH * 0.48))
   : Math.min(218, Math.max(198, SCREEN_WIDTH * 0.53));
 const HEADER_HEIGHT = IS_COMPACT ? 250 : 266;
+type TabName = 'home' | 'plants';
 
 function BrandHeader() {
   return (
@@ -130,42 +132,140 @@ function StatusCard({ sensors, healthLabel }: { sensors: SensorReading[]; health
   );
 }
 
-function BottomNav() {
+function BottomNav({ activeTab, onChangeTab }: { activeTab: TabName; onChangeTab: (tab: TabName) => void }) {
   return (
     <View style={styles.bottomNav}>
-      <Text style={styles.navIconActive}>⌂</Text>
-      <Text style={styles.navIcon}>♣</Text>
+      <Pressable accessibilityRole="button" onPress={() => onChangeTab('home')} style={styles.navButton}>
+        <Text style={[styles.navIcon, activeTab === 'home' && styles.navIconActive]}>⌂</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => onChangeTab('plants')} style={styles.navButton}>
+        <Text style={[styles.navIcon, activeTab === 'plants' && styles.navIconActive]}>
+          {activeTab === 'plants' ? '♣' : '♧'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function DashboardContent({
+  plant,
+  isLoading,
+  toggleAutomaticWatering
+}: {
+  plant: PlantDashboard;
+  isLoading: boolean;
+  toggleAutomaticWatering: () => void;
+}) {
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+      <BrandHeader />
+      <View style={styles.heroCurve} />
+      <View style={styles.contentArea}>
+        <View style={styles.heroRow}>
+          <View style={styles.photoFrame}>
+            <Image source={{ uri: plant.imageUrl }} style={styles.plantImage} />
+            <View style={styles.photoOverlay} />
+          </View>
+          <PlantCard
+            name={plant.name}
+            species={plant.species}
+            updatedMinutes={plant.lastUpdatedMinutes}
+            automaticWatering={plant.automaticWatering}
+            onToggle={toggleAutomaticWatering}
+          />
+        </View>
+        {isLoading && <Text style={styles.loadingText}>Sincronizando com o Supabase...</Text>}
+        <StatusCard sensors={plant.sensors} healthLabel={plant.healthLabel} />
+      </View>
+    </ScrollView>
+  );
+}
+
+function CategoryPill({ label }: { label: string }) {
+  return (
+    <View style={styles.categoryPill}>
+      <Text style={styles.categoryText}>{label}</Text>
+    </View>
+  );
+}
+
+function PlantListItem({ plant }: { plant: PlantDashboard }) {
+  return (
+    <View style={styles.plantListItem}>
+      <Image source={{ uri: plant.imageUrl }} style={styles.plantListImage} resizeMode="cover" />
+      <View style={styles.plantListInfo}>
+        <View style={styles.plantListHeader}>
+          <Text style={styles.plantListTitle} numberOfLines={1}>{plant.name}</Text>
+          <View style={styles.plantListActions}>
+            <Text style={styles.listActionIcon}>ⓘ</Text>
+            <Text style={styles.listActionIcon}>✎</Text>
+          </View>
+        </View>
+        <View style={styles.listSpeciesPill}>
+          <Text style={styles.listSpeciesText} numberOfLines={1}>⚚ {plant.species}</Text>
+        </View>
+        <View style={styles.listHealthRow}>
+          <View style={styles.listHealthDot} />
+          <Text style={styles.listHealthText}>{plant.healthLabel}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function PlantsContent({ plants }: { plants: PlantDashboard[] }) {
+  return (
+    <View style={styles.plantsRoot}>
+      <ScrollView contentContainerStyle={styles.plantsScrollContent} bounces={false}>
+        <BrandHeader />
+        <View style={styles.plantsHeaderArea}>
+          <Text style={styles.plantsTitle}>Suas Plantas</Text>
+          <View style={styles.searchBar}>
+            <Text style={styles.searchIcon}>⌕</Text>
+            <Text style={styles.searchPlaceholder}>Buscar uma planta registrada no app</Text>
+          </View>
+        </View>
+        <View style={styles.categoryArea}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+            <CategoryPill label="Categoria" />
+            <CategoryPill label="Categoria" />
+            <CategoryPill label="Categoria" />
+            <CategoryPill label="Categoria" />
+          </ScrollView>
+        </View>
+        <View style={styles.listContent}>
+          {plants.map((plant) => (
+            <PlantListItem key={plant.id} plant={plant} />
+          ))}
+          <Text style={styles.emptyHint}>As plantas que você registra{'\n'}aparecem aqui</Text>
+        </View>
+      </ScrollView>
+      <Pressable accessibilityRole="button" style={styles.scrollTopButton}>
+        <Text style={styles.scrollTopIcon}>⌃</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" style={styles.addPlantButton}>
+        <Text style={styles.addPlantIcon}>+</Text>
+      </Pressable>
     </View>
   );
 }
 
 export function HomeScreen() {
-  const { plant, isLoading, toggleAutomaticWatering } = usePlantDashboard();
+  const [activeTab, setActiveTab] = useState<TabName>('home');
+  const { plant, plants, isLoading, toggleAutomaticWatering } = usePlantDashboard();
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-        <BrandHeader />
-        <View style={styles.heroCurve} />
-        <View style={styles.contentArea}>
-          <View style={styles.heroRow}>
-            <View style={styles.photoFrame}>
-              <Image source={{ uri: plant.imageUrl }} style={styles.plantImage} />
-              <View style={styles.photoOverlay} />
-            </View>
-            <PlantCard
-              name={plant.name}
-              species={plant.species}
-              updatedMinutes={plant.lastUpdatedMinutes}
-              automaticWatering={plant.automaticWatering}
-              onToggle={toggleAutomaticWatering}
-            />
-          </View>
-          {isLoading && <Text style={styles.loadingText}>Sincronizando com o Supabase...</Text>}
-          <StatusCard sensors={plant.sensors} healthLabel={plant.healthLabel} />
-        </View>
-      </ScrollView>
-      <BottomNav />
+      {activeTab === 'home' ? (
+        <DashboardContent
+          plant={plant}
+          isLoading={isLoading}
+          toggleAutomaticWatering={toggleAutomaticWatering}
+        />
+      ) : (
+        <PlantsContent plants={plants} />
+      )}
+      <BottomNav activeTab={activeTab} onChangeTab={setActiveTab} />
     </View>
   );
 }
@@ -481,6 +581,194 @@ const styles = StyleSheet.create({
     width: 1,
     height: IS_COMPACT ? 62 : 72,
     backgroundColor: '#ececec'
+  },
+
+  plantsRoot: {
+    flex: 1,
+    backgroundColor: BACKGROUND
+  },
+  plantsScrollContent: {
+    paddingBottom: 132,
+    backgroundColor: BACKGROUND
+  },
+  plantsHeaderArea: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: IS_COMPACT ? 18 : 34,
+    paddingTop: IS_COMPACT ? 22 : 36,
+    paddingBottom: IS_COMPACT ? 18 : 20
+  },
+  plantsTitle: {
+    color: TEXT,
+    fontSize: IS_COMPACT ? 24 : 34,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: IS_COMPACT ? 10 : 16,
+    letterSpacing: -0.7
+  },
+  searchBar: {
+    height: IS_COMPACT ? 28 : 54,
+    borderRadius: 28,
+    backgroundColor: '#f3f3f3',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: IS_COMPACT ? 10 : 18,
+    gap: IS_COMPACT ? 6 : 12
+  },
+  searchIcon: {
+    color: '#444444',
+    fontSize: IS_COMPACT ? 17 : 34,
+    lineHeight: IS_COMPACT ? 18 : 36
+  },
+  searchPlaceholder: {
+    color: '#555555',
+    fontSize: IS_COMPACT ? 9 : 21,
+    flex: 1
+  },
+  categoryArea: {
+    paddingVertical: IS_COMPACT ? 14 : 42,
+    backgroundColor: BACKGROUND
+  },
+  categoryScroll: {
+    paddingHorizontal: IS_COMPACT ? 12 : 20,
+    gap: IS_COMPACT ? 10 : 18
+  },
+  categoryPill: {
+    backgroundColor: '#2fa36f',
+    borderRadius: 28,
+    paddingHorizontal: IS_COMPACT ? 18 : 28,
+    height: IS_COMPACT ? 34 : 72,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  categoryText: {
+    color: '#ffffff',
+    fontSize: IS_COMPACT ? 15 : 30
+  },
+  listContent: {
+    paddingHorizontal: IS_COMPACT ? 6 : 26,
+    paddingBottom: 34
+  },
+  plantListItem: {
+    minHeight: IS_COMPACT ? 52 : 118,
+    borderRadius: IS_COMPACT ? 5 : 18,
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    marginBottom: IS_COMPACT ? 5 : 22
+  },
+  plantListImage: {
+    width: IS_COMPACT ? 82 : 296,
+    height: IS_COMPACT ? 52 : 118
+  },
+  plantListInfo: {
+    flex: 1,
+    paddingHorizontal: IS_COMPACT ? 5 : 26,
+    paddingVertical: IS_COMPACT ? 3 : 8,
+    justifyContent: 'center'
+  },
+  plantListHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8
+  },
+  plantListTitle: {
+    flex: 1,
+    color: TEXT,
+    fontSize: IS_COMPACT ? 14 : 30,
+    fontWeight: '800',
+    letterSpacing: -0.4
+  },
+  plantListActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: IS_COMPACT ? 7 : 20
+  },
+  listActionIcon: {
+    color: '#383838',
+    fontSize: IS_COMPACT ? 14 : 34,
+    fontWeight: '800'
+  },
+  listSpeciesPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: GREEN,
+    borderRadius: 24,
+    paddingHorizontal: IS_COMPACT ? 5 : 12,
+    paddingVertical: IS_COMPACT ? 1 : 4,
+    marginTop: IS_COMPACT ? 2 : 8,
+    maxWidth: '72%'
+  },
+  listSpeciesText: {
+    color: '#ffffff',
+    fontSize: IS_COMPACT ? 10 : 22
+  },
+  listHealthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: IS_COMPACT ? 4 : 10,
+    marginTop: IS_COMPACT ? 2 : 8,
+    marginLeft: IS_COMPACT ? 3 : 18
+  },
+  listHealthDot: {
+    width: IS_COMPACT ? 5 : 16,
+    height: IS_COMPACT ? 5 : 16,
+    borderRadius: IS_COMPACT ? 2.5 : 8,
+    backgroundColor: '#47b466'
+  },
+  listHealthText: {
+    color: '#47aa60',
+    fontSize: IS_COMPACT ? 10 : 25
+  },
+  emptyHint: {
+    color: '#7d7d7d',
+    textAlign: 'center',
+    fontSize: IS_COMPACT ? 12 : 18,
+    marginTop: IS_COMPACT ? 18 : 28,
+    lineHeight: IS_COMPACT ? 16 : 24
+  },
+  scrollTopButton: {
+    position: 'absolute',
+    bottom: IS_COMPACT ? 56 : 106,
+    alignSelf: 'center',
+    width: IS_COMPACT ? 22 : 54,
+    height: IS_COMPACT ? 22 : 54,
+    borderRadius: IS_COMPACT ? 11 : 27,
+    backgroundColor: 'rgba(180,180,180,0.48)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  scrollTopIcon: {
+    color: '#676767',
+    fontSize: IS_COMPACT ? 19 : 42,
+    lineHeight: IS_COMPACT ? 22 : 46
+  },
+  addPlantButton: {
+    position: 'absolute',
+    right: IS_COMPACT ? 14 : 28,
+    bottom: IS_COMPACT ? 54 : 112,
+    width: IS_COMPACT ? 42 : 110,
+    height: IS_COMPACT ? 42 : 110,
+    borderRadius: IS_COMPACT ? 21 : 55,
+    backgroundColor: '#2fa36f',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.22,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 7
+  },
+  addPlantIcon: {
+    color: '#ffffff',
+    fontSize: IS_COMPACT ? 42 : 92,
+    lineHeight: IS_COMPACT ? 44 : 96,
+    fontWeight: '600'
+  },
+  navButton: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   bottomNav: {
     position: 'absolute',
