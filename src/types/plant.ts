@@ -1,4 +1,4 @@
-export type SensorStatus = 'good' | 'warning' | 'critical';
+export type SensorStatus = "good" | "warning" | "critical";
 
 export type SensorReading = {
   label: string;
@@ -6,6 +6,19 @@ export type SensorReading = {
   icon: string;
   color: string;
   status: SensorStatus;
+};
+
+export type DetailCard = {
+  id: string;
+  title: string;
+  value: string;
+  unit?: string;
+  description?: string;
+  icon?: string;
+  iconColor?: string;
+  status: SensorStatus;
+  valueColor?: string;
+  compact?: boolean;
 };
 
 export type PlantDashboard = {
@@ -17,4 +30,5 @@ export type PlantDashboard = {
   healthLabel: string;
   imageUrl: string;
   sensors: SensorReading[];
+  detailCards: DetailCard[];
 };

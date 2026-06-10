@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePlantDashboard } from '../hooks/usePlantDashboard';
-import type { PlantDashboard, SensorReading } from '../types/plant';
+import type { DetailCard, PlantDashboard, SensorReading } from '../types/plant';
 
 const GREEN = '#2d624a';
 const MINT = '#33b884';
@@ -133,6 +133,48 @@ function StatusCard({ sensors, healthLabel }: { sensors: SensorReading[]; health
   );
 }
 
+
+function DetailedMetricCard({ card }: { card: DetailCard }) {
+  return (
+    <View style={styles.detailMetricCard}>
+      <View style={styles.detailMetricHeader}>
+        <Text style={styles.detailMetricTitle} numberOfLines={2}>{card.title}</Text>
+        {card.icon && <Text style={[styles.detailMetricIcon, { color: card.iconColor }]}>{card.icon}</Text>}
+      </View>
+      <View style={styles.detailMetricBody}>
+        <Text
+          style={[
+            styles.detailMetricValue,
+            card.compact && styles.detailMetricValueCompact,
+            card.valueColor ? { color: card.valueColor } : undefined
+          ]}
+          numberOfLines={card.compact ? 3 : 1}
+        >
+          {card.value}
+        </Text>
+        {card.unit && <Text style={styles.detailMetricUnit}>{card.unit}</Text>}
+        {card.description && <Text style={styles.detailMetricDescription}>{card.description}</Text>}
+      </View>
+      <Text style={styles.detailChevron}>›</Text>
+    </View>
+  );
+}
+
+function DetailedSheet({ cards }: { cards: DetailCard[] }) {
+  return (
+    <View style={styles.detailSheet}>
+      <View style={styles.detailHandle} />
+      <Text style={styles.detailTitle}>Vista Detalhada</Text>
+      <View style={styles.detailDivider} />
+      <View style={styles.detailGrid}>
+        {cards.map((card) => (
+          <DetailedMetricCard key={card.id} card={card} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function HomeNavIcon({ active }: { active: boolean }) {
   return (
     <View style={styles.homeIconWrap}>
@@ -198,6 +240,7 @@ function DashboardContent({
           </View>
           {isLoading && <Text style={styles.loadingText}>Sincronizando com o Supabase...</Text>}
           <StatusCard sensors={plant.sensors} healthLabel={plant.healthLabel} />
+          <DetailedSheet cards={plant.detailCards} />
         </View>
       </ScrollView>
     </View>
@@ -613,6 +656,116 @@ const styles = StyleSheet.create({
     width: 1,
     height: IS_COMPACT ? 62 : 72,
     backgroundColor: '#ececec'
+  },
+
+
+  detailSheet: {
+    marginHorizontal: CONTENT_PADDING + 4,
+    marginTop: IS_COMPACT ? 62 : 74,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: IS_COMPACT ? 18 : 24,
+    paddingTop: 12,
+    paddingBottom: 34,
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 2
+  },
+  detailHandle: {
+    alignSelf: 'center',
+    width: IS_COMPACT ? 28 : 34,
+    height: 5,
+    borderRadius: 4,
+    backgroundColor: '#cfcfcf',
+    marginBottom: 6
+  },
+  detailTitle: {
+    color: TEXT,
+    fontSize: IS_COMPACT ? 26 : 30,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.6
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: '#eeeeee',
+    marginTop: 8,
+    marginBottom: 16
+  },
+  detailGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: IS_COMPACT ? 12 : 16,
+    justifyContent: 'space-between'
+  },
+  detailMetricCard: {
+    width: '47.5%',
+    minHeight: IS_COMPACT ? 132 : 150,
+    borderRadius: 8,
+    backgroundColor: '#f9f9f8',
+    paddingHorizontal: IS_COMPACT ? 8 : 10,
+    paddingVertical: 8,
+    position: 'relative'
+  },
+  detailMetricHeader: {
+    minHeight: IS_COMPACT ? 28 : 32,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 4
+  },
+  detailMetricTitle: {
+    flex: 1,
+    color: '#111111',
+    fontSize: IS_COMPACT ? 13 : 15,
+    lineHeight: IS_COMPACT ? 16 : 18
+  },
+  detailMetricIcon: {
+    fontSize: IS_COMPACT ? 18 : 20,
+    lineHeight: IS_COMPACT ? 20 : 22
+  },
+  detailMetricBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 8
+  },
+  detailMetricValue: {
+    color: '#47aa60',
+    fontSize: IS_COMPACT ? 40 : 46,
+    fontWeight: '800',
+    letterSpacing: -1.2,
+    textAlign: 'center'
+  },
+  detailMetricValueCompact: {
+    color: TEXT,
+    fontSize: IS_COMPACT ? 19 : 22,
+    lineHeight: IS_COMPACT ? 24 : 27,
+    fontWeight: '500',
+    letterSpacing: -0.2
+  },
+  detailMetricUnit: {
+    color: '#3f3f3f',
+    fontSize: IS_COMPACT ? 11 : 12,
+    textAlign: 'center'
+  },
+  detailMetricDescription: {
+    color: '#4f4f4f',
+    fontSize: IS_COMPACT ? 10 : 11,
+    lineHeight: IS_COMPACT ? 12 : 13,
+    marginTop: 4,
+    textAlign: 'center'
+  },
+  detailChevron: {
+    position: 'absolute',
+    right: 8,
+    bottom: 4,
+    color: '#333333',
+    fontSize: 22,
+    lineHeight: 22
   },
 
   plantsRoot: {
