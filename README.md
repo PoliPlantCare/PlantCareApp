@@ -1,50 +1,46 @@
-# Welcome to your Expo app 👋
+# PlantCareApp
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Interface móvel para o ecossistema **PlantCare**, desenvolvida em React Native (Expo). O aplicativo atua como o principal ponto de interação do usuário com suas plantas e com o sistema automatizado de irrigação.
 
-## Get started
+Este projeto é a interface mobile e deve ser utilizado em conjunto com o nosso backend e hardware, que podem ser encontrados na organização GitHub: [PoliPlantCare](https://github.com/PoliPlantCare).
 
-1. Install dependencies
+## Funcionalidades
 
+De acordo com os requisitos do projeto, o aplicativo fornece:
+
+*   **Monitoramento em Tempo Real:** Visualização contínua dos dados coletados pelos sensores do hardware (temperatura, umidade do ar, umidade do solo e luminosidade).
+*   **Gestão de Plantas:** Cadastro de novas plantas a partir de um banco de dados pré-definido (como Orquídea, Jiboia, Margarida e Girassol), associando-as com seus parâmetros ideais de calibração.
+*   **Controle de Irrigação:** 
+    *   Configuração do modo de irrigação ("Automático" ou "Manual") de forma independente para cada planta.
+    *   Definição de agendamentos e horários preferenciais para a rega.
+    *   Registro manual no app de irrigações feitas pelo usuário, evitando assim regas automáticas desnecessárias.
+*   **Notificações e Alertas:** Alertas push e pop-ups sobre irrigações futuras no modo manual, falhas de equipamento, ressecamento crítico do solo e dicas quanto a condições ambientais desfavoráveis.
+*   **Histórico de Dados:** Armazenamento e exibição do histórico de medições passadas dos sensores e do log de irrigações efetuadas.
+
+## Stack Tecnológico
+
+O aplicativo foi construído priorizando a robustez, usabilidade e a integração nativa com os serviços em nuvem:
+
+*   **Framework:** [React Native](https://reactnative.dev/) através da plataforma [Expo](https://expo.dev/) (utilizando navegação *file-based* através da pasta `app/`).
+*   **Linguagem:** TypeScript, garantindo segurança de tipos e facilidade na manutenção.
+*   **Integração com Backend:** [Supabase SDK](https://supabase.com/docs/reference/javascript/introduction). O app consome e envia informações diretamente para as tabelas do Supabase, aproveitando as políticas de segurança (RLS) e a comunicação *Realtime*.
+
+## Como Instalar e Executar
+
+Certifique-se de que o backend [PlantCareServer](https://github.com/PoliPlantCare/PlantCareServer) esteja rodando, seja localmente ou na nuvem, para o completo funcionamento do app.
+
+1. Clone o repositório para a sua máquina local.
+2. Instale as dependências:
    ```bash
    npm install
    ```
-
-2. Start the app
-
+3. Configure as variáveis de ambiente baseando-se no `.env.example` preenchendo as chaves do Supabase.
+4. Inicie o servidor de desenvolvimento:
    ```bash
    npx expo start
    ```
+5. Utilize o app **Expo Go** em seu dispositivo móvel (lendo o QR Code) ou pressione `a`/`i` no terminal para rodar em emuladores Android ou iOS virtuais.
 
-In the output, you'll find options to open the app in a
+## Licença
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Este software é **Proprietário**. Todos os direitos reservados aos autores. A cópia, modificação ou distribuição não autorizada é estritamente proibida.
