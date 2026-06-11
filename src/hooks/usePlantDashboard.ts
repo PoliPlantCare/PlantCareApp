@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { regarPlanta, atualizarConfig, atualizarHorarios } from "../lib/api";
 import type {
   DetailCard,
   NewPlantInput,
@@ -381,6 +382,7 @@ export function usePlantDashboard() {
   const [plant, setPlant] = useState<PlantDashboard>(fallbackPlant);
   const [plants, setPlants] = useState<PlantDashboard[]>(fallbackPlants);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWatering, setIsWatering] = useState(false);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -614,13 +616,33 @@ export function usePlantDashboard() {
     );
   }, []);
 
+  const triggerManualWatering = useCallback(async () => {
+    try {
+      setIsWatering(true);
+      // Como ainda não temos os dados de calibração oficiais no BD, usamos os valores padrão (20 e 80)
+      await regarPlanta({
+        nome: plant.name,
+        umidade_min: 20,
+        umidade_max: 80,
+        tempo_segundos: 5
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Falha ao regar a planta. Verifique sua conexão.");
+    } finally {
+      setIsWatering(false);
+    }
+  }, [plant.name]);
+
   return useMemo(
     () => ({
       plant,
       plants,
       isLoading,
+      isWatering,
       refresh,
       toggleAutomaticWatering,
+      triggerManualWatering,
       selectPlant,
       addPlant,
       updatePlant,
@@ -630,8 +652,10 @@ export function usePlantDashboard() {
       plant,
       plants,
       isLoading,
+      isWatering,
       refresh,
       toggleAutomaticWatering,
+      triggerManualWatering,
       selectPlant,
       addPlant,
       updatePlant,
