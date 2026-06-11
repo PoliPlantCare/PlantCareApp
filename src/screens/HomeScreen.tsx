@@ -666,6 +666,109 @@ function AddPlantScreen({
   );
 }
 
+import { atualizarConfig, atualizarHorarios } from "../lib/api";
+
+function SettingsPlantScreen({
+  plant,
+  onBack,
+}: {
+  plant: PlantDashboard;
+  onBack: () => void;
+}) {
+  const [umidadeMax, setUmidadeMax] = useState("80");
+  const [umidadeMin, setUmidadeMin] = useState("20");
+  const [horarioOn, setHorarioOn] = useState("08:00");
+  const [horarioOff, setHorarioOff] = useState("08:05");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await atualizarConfig({
+        nome: plant.name,
+        umidade_max: parseInt(umidadeMax, 10),
+        umidade_min: parseInt(umidadeMin, 10),
+      });
+      if (horarioOn && horarioOff) {
+        await atualizarHorarios([{ on: horarioOn, off: horarioOff }]);
+      }
+      alert("Configurações atualizadas!");
+      onBack();
+    } catch (e) {
+      alert("Erro ao salvar configurações. Verifique sua conexão.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <View style={styles.addScreenRoot}>
+      <Pressable accessibilityRole="button" onPress={onBack} style={styles.addBackButton}>
+        <Text style={styles.addBackIcon}>‹</Text>
+      </Pressable>
+      <ScrollView
+        style={styles.addScreenScroll}
+        contentContainerStyle={styles.addScreenContent}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
+        <SeedlingIcon />
+        <Text style={styles.addQuestion}>Configurações Avançadas</Text>
+        <Text style={styles.addDescription}>
+          Ajuste os limites de umidade (0 a 100) e os horários de rega (HH:MM).
+        </Text>
+
+        <Text style={[styles.addQuestion, {marginTop: 24, fontSize: 20}]}>Umidade</Text>
+        <TextInput
+          value={umidadeMin}
+          onChangeText={setUmidadeMin}
+          placeholder="Mínima (%) - Ex: 20"
+          placeholderTextColor="#9c9c9c"
+          style={styles.addInput}
+          keyboardType="numeric"
+        />
+        <TextInput
+          value={umidadeMax}
+          onChangeText={setUmidadeMax}
+          placeholder="Máxima (%) - Ex: 80"
+          placeholderTextColor="#9c9c9c"
+          style={styles.addInput}
+          keyboardType="numeric"
+        />
+
+        <Text style={[styles.addQuestion, {marginTop: 24, fontSize: 20}]}>Agenda Automática</Text>
+        <TextInput
+          value={horarioOn}
+          onChangeText={setHorarioOn}
+          placeholder="Ligar (HH:MM) - Ex: 08:00"
+          placeholderTextColor="#9c9c9c"
+          style={styles.addInput}
+        />
+        <TextInput
+          value={horarioOff}
+          onChangeText={setHorarioOff}
+          placeholder="Desligar (HH:MM) - Ex: 08:05"
+          placeholderTextColor="#9c9c9c"
+          style={styles.addInput}
+        />
+      </ScrollView>
+      <Pressable
+        accessibilityRole="button"
+        disabled={isSaving}
+        onPress={handleSave}
+        style={[
+          styles.continueButton,
+          isSaving && styles.continueButtonDisabled,
+        ]}
+      >
+        <Text style={styles.continueButtonText}>
+          {isSaving ? "Salvando..." : "Salvar Configurações"}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export function HomeScreen() {
   const [activeTab, setActiveTab] = useState<TabName>("home");
   const [screen, setScreen] = useState<ScreenName>("dashboard");
@@ -737,6 +840,15 @@ export function HomeScreen() {
         }}
         onSubmit={handleUpdatePlant}
         onDelete={handleDeletePlant}
+      />
+    );
+  }
+
+  if (screen === "settingsPlant") {
+    return (
+      <SettingsPlantScreen
+        plant={plant}
+        onBack={() => setScreen("dashboard")}
       />
     );
   }
