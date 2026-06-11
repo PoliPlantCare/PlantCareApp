@@ -10,12 +10,19 @@ import {
   View,
 } from "react-native";
 import { usePlantDashboard } from "../hooks/usePlantDashboard";
+import { atualizarConfig, atualizarHorarios } from "../lib/api";
 import type {
   DetailCard,
   NewPlantInput,
   PlantCareFrequency,
+  PlantLocationType,
+  SunExposure,
+  WateringWindow,
+  PlantAlert,
   PlantDashboard,
+  SensorHistoryEntry,
   SensorReading,
+  WateringHistoryEntry,
 } from "../types/plant";
 
 const GREEN = "#2d624a";
@@ -98,6 +105,7 @@ function PlantCard({
   updatedMinutes,
   automaticWatering,
   onToggle,
+  onSettings,
 }: {
   name: string;
   species: string;
@@ -127,7 +135,11 @@ function PlantCard({
             Rega Automática
           </Text>
         </View>
-        <Pressable accessibilityRole="button" style={styles.settingsButton} onPress={onSettings}>
+        <Pressable
+          accessibilityRole="button"
+          style={styles.settingsButton}
+          onPress={onSettings}
+        >
           <GearIcon />
         </Pressable>
       </View>
@@ -218,6 +230,81 @@ function DetailedMetricCard({ card }: { card: DetailCard }) {
         )}
       </View>
       <Text style={styles.detailChevron}>›</Text>
+    </View>
+  );
+}
+
+function AlertsPanel({ alerts }: { alerts: PlantAlert[] }) {
+  if (alerts.length === 0) {
+    return (
+      <View style={styles.infoPanel}>
+        <Text style={styles.infoPanelTitle}>Alertas</Text>
+        <Text style={styles.infoPanelText}>
+          Nenhum alerta ativo no momento.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.infoPanel}>
+      <Text style={styles.infoPanelTitle}>Alertas persistentes</Text>
+      {alerts.map((alert) => (
+        <View key={alert.id} style={styles.alertRow}>
+          <Text style={styles.alertBadge}>
+            {alert.severity === "critical"
+              ? "!"
+              : alert.severity === "warning"
+                ? "•"
+                : "i"}
+          </Text>
+          <View style={styles.alertContent}>
+            <Text style={styles.alertTitle}>{alert.title}</Text>
+            <Text style={styles.infoPanelText}>{alert.message}</Text>
+            <Text style={styles.alertRequirement}>{alert.requirement}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function HistoryPanel({
+  sensorHistory,
+  wateringHistory,
+}: {
+  sensorHistory: SensorHistoryEntry[];
+  wateringHistory: WateringHistoryEntry[];
+}) {
+  const latestSensors = sensorHistory.slice(0, 6);
+  const latestWatering = wateringHistory.slice(0, 3);
+
+  return (
+    <View style={styles.infoPanel}>
+      <Text style={styles.infoPanelTitle}>Histórico</Text>
+      {latestSensors.length === 0 ? (
+        <Text style={styles.infoPanelText}>
+          Aguardando leituras do dispositivo PlantCare.
+        </Text>
+      ) : (
+        latestSensors.map((entry) => (
+          <Text key={entry.id} style={styles.historyLine}>
+            {entry.label}: {Math.round(entry.value)}
+            {entry.unit} · {new Date(entry.createdAt).toLocaleString("pt-BR")}
+          </Text>
+        ))
+      )}
+      <Text style={styles.historySubtitle}>Regas registradas</Text>
+      {latestWatering.length === 0 ? (
+        <Text style={styles.infoPanelText}>Nenhuma rega registrada ainda.</Text>
+      ) : (
+        latestWatering.map((entry) => (
+          <Text key={entry.id} style={styles.historyLine}>
+            {entry.mode === "auto" ? "Automática" : "Manual"} ·{" "}
+            {new Date(entry.createdAt).toLocaleString("pt-BR")}
+          </Text>
+        ))
+      )}
     </View>
   );
 }
@@ -349,13 +436,18 @@ function DashboardContent({
             />
           </View>
           <View style={styles.waterNowContainer}>
-            <Pressable 
-              accessibilityRole="button" 
-              style={[styles.waterNowButton, isWatering && styles.waterNowButtonDisabled]}
+            <Pressable
+              accessibilityRole="button"
+              style={[
+                styles.waterNowButton,
+                isWatering && styles.waterNowButtonDisabled,
+              ]}
               onPress={triggerManualWatering}
               disabled={isWatering}
             >
-              <Text style={styles.waterNowText}>{isWatering ? "Regando a planta..." : "Regar Agora (Manual)"}</Text>
+              <Text style={styles.waterNowText}>
+                {isWatering ? "Regando a planta..." : "Regar Agora (Manual)"}
+              </Text>
             </Pressable>
           </View>
           {isLoading && (
@@ -364,7 +456,12 @@ function DashboardContent({
             </Text>
           )}
           <StatusCard sensors={plant.sensors} healthLabel={plant.healthLabel} />
+          <AlertsPanel alerts={plant.alerts} />
           <DetailedSheet cards={plant.detailCards} />
+          <HistoryPanel
+            sensorHistory={plant.sensorHistory}
+            wateringHistory={plant.wateringHistory}
+          />
         </View>
       </ScrollView>
     </View>
@@ -499,7 +596,7 @@ function PlantsContent({
   );
 }
 
-const PLANT_SPECIES = ["Margarida", "Jibóia", "Girassol", "Orquídea"];
+const PLANT_SPECIES = ["Margarida", "Jiboia", "Girassol", "Orquídea"];
 
 function SeedlingIcon() {
   return <Text style={styles.seedlingIcon}>⌘</Text>;
@@ -546,6 +643,18 @@ function AddPlantScreen({
   const [careFrequency, setCareFrequency] = useState<PlantCareFrequency>(
     initialPlant?.careFrequency ?? "frequent",
   );
+  const [locationType, setLocationType] = useState<PlantLocationType>(
+    initialPlant?.locationType ?? "indoor",
+  );
+  const [sunExposure, setSunExposure] = useState<SunExposure>(
+    initialPlant?.sunExposure ?? "partial",
+  );
+  const [wateringOn, setWateringOn] = useState(
+    initialPlant?.wateringWindows[0]?.on ?? "08:00",
+  );
+  const [wateringOff, setWateringOff] = useState(
+    initialPlant?.wateringWindows[0]?.off ?? "08:05",
+  );
 
   const canSubmit = name.trim().length > 0;
 
@@ -554,10 +663,17 @@ function AddPlantScreen({
       return;
     }
 
+    const wateringWindows: WateringWindow[] = [
+      { id: `${species}-principal`, on: wateringOn, off: wateringOff },
+    ];
+
     onSubmit({
       name: name.trim(),
       species,
       careFrequency,
+      locationType,
+      sunExposure,
+      wateringWindows,
     });
   };
 
@@ -639,6 +755,88 @@ function AddPlantScreen({
         >
           <Text style={styles.frequencyButtonText}>Quero baixa manutenção</Text>
         </Pressable>
+
+        <Text style={styles.addQuestion}>Onde ela fica?</Text>
+        <Text style={styles.addDescription}>
+          Essas informações alimentam os parâmetros enviados ao dispositivo
+          PlantCare.
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setLocationType("indoor")}
+          style={[
+            styles.frequencyButton,
+            locationType === "indoor" && styles.frequencyButtonSelected,
+          ]}
+        >
+          <Text style={styles.frequencyButtonText}>Ambiente fechado</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setLocationType("outdoor")}
+          style={[
+            styles.frequencyButton,
+            styles.lowFrequencyButton,
+            locationType === "outdoor" && styles.lowFrequencyButtonSelected,
+          ]}
+        >
+          <Text style={styles.frequencyButtonText}>Ambiente aberto</Text>
+        </Pressable>
+
+        <Text style={styles.addQuestion}>Qual é a exposição ao sol?</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setSunExposure("shade")}
+          style={[
+            styles.frequencyButton,
+            sunExposure === "shade" && styles.frequencyButtonSelected,
+          ]}
+        >
+          <Text style={styles.frequencyButtonText}>Sombra</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setSunExposure("partial")}
+          style={[
+            styles.frequencyButton,
+            sunExposure === "partial" && styles.frequencyButtonSelected,
+          ]}
+        >
+          <Text style={styles.frequencyButtonText}>Meia-sombra</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setSunExposure("full")}
+          style={[
+            styles.frequencyButton,
+            styles.lowFrequencyButton,
+            sunExposure === "full" && styles.lowFrequencyButtonSelected,
+          ]}
+        >
+          <Text style={styles.frequencyButtonText}>Sol pleno</Text>
+        </Pressable>
+
+        <Text style={styles.addQuestion}>
+          Horário preferencial de irrigação
+        </Text>
+        <Text style={styles.addDescription}>
+          O servidor publica esse intervalo no tópico MQTT
+          planta/bomba/horarios.
+        </Text>
+        <TextInput
+          value={wateringOn}
+          onChangeText={setWateringOn}
+          placeholder="Início (HH:MM)"
+          placeholderTextColor="#9c9c9c"
+          style={styles.addInput}
+        />
+        <TextInput
+          value={wateringOff}
+          onChangeText={setWateringOff}
+          placeholder="Fim (HH:MM)"
+          placeholderTextColor="#9c9c9c"
+          style={styles.addInput}
+        />
       </ScrollView>
       {onDelete && (
         <Pressable
@@ -665,8 +863,6 @@ function AddPlantScreen({
     </View>
   );
 }
-
-import { atualizarConfig, atualizarHorarios } from "../lib/api";
 
 function SettingsPlantScreen({
   plant,
@@ -703,7 +899,11 @@ function SettingsPlantScreen({
 
   return (
     <View style={styles.addScreenRoot}>
-      <Pressable accessibilityRole="button" onPress={onBack} style={styles.addBackButton}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onBack}
+        style={styles.addBackButton}
+      >
         <Text style={styles.addBackIcon}>‹</Text>
       </Pressable>
       <ScrollView
@@ -718,7 +918,9 @@ function SettingsPlantScreen({
           Ajuste os limites de umidade (0 a 100) e os horários de rega (HH:MM).
         </Text>
 
-        <Text style={[styles.addQuestion, {marginTop: 24, fontSize: 20}]}>Umidade</Text>
+        <Text style={[styles.addQuestion, { marginTop: 24, fontSize: 20 }]}>
+          Umidade
+        </Text>
         <TextInput
           value={umidadeMin}
           onChangeText={setUmidadeMin}
@@ -736,7 +938,9 @@ function SettingsPlantScreen({
           keyboardType="numeric"
         />
 
-        <Text style={[styles.addQuestion, {marginTop: 24, fontSize: 20}]}>Agenda Automática</Text>
+        <Text style={[styles.addQuestion, { marginTop: 24, fontSize: 20 }]}>
+          Agenda Automática
+        </Text>
         <TextInput
           value={horarioOn}
           onChangeText={setHorarioOn}
@@ -1179,7 +1383,7 @@ const styles = StyleSheet.create({
     backgroundColor: MINT,
     paddingVertical: 14,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1187,11 +1391,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   waterNowButtonDisabled: {
-    backgroundColor: '#88ceb3',
+    backgroundColor: "#88ceb3",
   },
   waterNowText: {
-    color: '#ffffff',
-    fontWeight: '700',
+    color: "#ffffff",
+    fontWeight: "700",
     fontSize: 16,
   },
   sensorIcon: {
@@ -1413,6 +1617,72 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  infoPanel: {
+    marginTop: 18,
+    borderRadius: 24,
+    backgroundColor: "#ffffff",
+    padding: IS_COMPACT ? 16 : 20,
+    shadowColor: "#000000",
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  infoPanelTitle: {
+    color: TEXT,
+    fontSize: IS_COMPACT ? 20 : 24,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
+  infoPanelText: {
+    color: "#555555",
+    fontSize: IS_COMPACT ? 13 : 15,
+    lineHeight: IS_COMPACT ? 18 : 21,
+  },
+  alertRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eeeeee",
+  },
+  alertBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#d99a00",
+    color: "#ffffff",
+    textAlign: "center",
+    lineHeight: 26,
+    fontWeight: "900",
+  },
+  alertContent: {
+    flex: 1,
+  },
+  alertTitle: {
+    color: TEXT,
+    fontSize: IS_COMPACT ? 15 : 17,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  alertRequirement: {
+    color: GREEN,
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 6,
+  },
+  historyLine: {
+    color: "#444444",
+    fontSize: IS_COMPACT ? 13 : 15,
+    paddingVertical: 4,
+  },
+  historySubtitle: {
+    color: TEXT,
+    fontSize: IS_COMPACT ? 15 : 17,
+    fontWeight: "800",
+    marginTop: 12,
+    marginBottom: 6,
+  },
   detailSheet: {
     marginHorizontal: CONTENT_PADDING + 4,
     marginTop: IS_COMPACT ? 62 : 74,
