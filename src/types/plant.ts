@@ -8,6 +8,14 @@ export type SensorReading = {
   status: SensorStatus;
 };
 
+export type PlantCareFrequency = "frequent" | "low";
+
+export type NewPlantInput = {
+  name: string;
+  species: string;
+  careFrequency: PlantCareFrequency;
+};
+
 export type DetailCard = {
   id: string;
   title: string;

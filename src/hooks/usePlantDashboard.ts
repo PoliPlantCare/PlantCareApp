@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type {
   DetailCard,
+  NewPlantInput,
   PlantDashboard,
   SensorReading,
   SensorStatus,
@@ -82,6 +83,8 @@ const fallbackPlants: PlantDashboard[] = [
   },
 ];
 
+const createLocalPlantId = () => `local-${Date.now()}`;
+
 type PlantRecord = {
   id: string;
   nome?: string | null;
@@ -91,10 +94,8 @@ type PlantRecord = {
   automatic_watering?: boolean | null;
   rega_automatica?: boolean | null;
   image_url?: string | null;
-  proxima_rega_horas?: number | string | null;
-  next_watering_hours?: number | string | null;
-  ultima_rega_horas?: number | string | null;
-  last_watering_hours?: number | string | null;
+  care_frequency?: string | null;
+  frequencia_cuidado?: string | null;
 };
 
 type ReadingRecord = {
@@ -198,31 +199,13 @@ const statusColor = (status: SensorStatus) => {
 const sensorByLabel = (sensors: SensorReading[], label: string) =>
   sensors.find((sensor) => sensor.label.toLowerCase() === label.toLowerCase());
 
-const hoursValue = (value?: number | string | null, fallbackValue = 1) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed)
-    ? Math.max(0, Math.round(parsed))
-    : fallbackValue;
-};
-
-const buildDetailCards = (
-  sensors: SensorReading[],
-  plantRecord?: PlantRecord,
-): DetailCard[] => {
+const buildDetailCards = (sensors: SensorReading[]): DetailCard[] => {
   const light =
     sensorByLabel(sensors, "Luminosidade") ?? fallbackPlant.sensors[0];
   const soil = sensorByLabel(sensors, "Solo") ?? fallbackPlant.sensors[1];
   const air = sensorByLabel(sensors, "Ar") ?? fallbackPlant.sensors[2];
   const temperature =
     sensorByLabel(sensors, "Temperatura") ?? fallbackPlant.sensors[3];
-  const nextWateringHours = hoursValue(
-    plantRecord?.proxima_rega_horas ?? plantRecord?.next_watering_hours,
-    1,
-  );
-  const lastWateringHours = hoursValue(
-    plantRecord?.ultima_rega_horas ?? plantRecord?.last_watering_hours,
-    3,
-  );
   const needsAttention = sensors.some((sensor) => sensor.status !== "good");
 
   return [
@@ -270,8 +253,8 @@ const buildDetailCards = (
     {
       id: "next-watering",
       title: "Próxima rega automática prevista em",
-      value: String(nextWateringHours),
-      unit: nextWateringHours === 1 ? "Hora" : "Horas",
+      value: "1",
+      unit: "Hora",
       description: "Com base nas tendências de umidade",
       status: "good",
     },
@@ -288,8 +271,8 @@ const buildDetailCards = (
     {
       id: "last-watering",
       title: "Última rega realizada há",
-      value: String(lastWateringHours),
-      unit: lastWateringHours === 1 ? "Hora" : "Horas",
+      value: "3",
+      unit: "Horas",
       status: "good",
     },
     {
@@ -365,9 +348,22 @@ const plantDashboardFromRecord = (
     lastUpdatedMinutes: formatElapsedMinutes(latestCreatedAt),
     healthLabel: "Saudável",
     sensors,
-    detailCards: buildDetailCards(sensors, plantRecord),
+    detailCards: buildDetailCards(sensors),
   };
 };
+
+const plantDashboardFromInput = (
+  newPlant: NewPlantInput,
+  id = createLocalPlantId(),
+): PlantDashboard => ({
+  ...fallbackPlant,
+  id,
+  name: newPlant.name,
+  species: newPlant.species,
+  imageUrl: imageForSpecies(newPlant.species),
+  automaticWatering: false,
+  detailCards: buildDetailCards(fallbackPlant.sensors),
+});
 
 export function usePlantDashboard() {
   const [plant, setPlant] = useState<PlantDashboard>(fallbackPlant);
@@ -449,7 +445,7 @@ export function usePlantDashboard() {
       ),
     );
 
-    if (plant.id === fallbackPlant.id) {
+    if (plant.id === fallbackPlant.id || plant.id.startsWith("local-")) {
       return;
     }
 
@@ -473,8 +469,45 @@ export function usePlantDashboard() {
     }
   }, [plant.automaticWatering, plant.id]);
 
+  const addPlant = useCallback(async (newPlant: NewPlantInput) => {
+    const optimisticPlant = plantDashboardFromInput(newPlant);
+
+    setPlant(optimisticPlant);
+    setPlants((currentPlants) => [optimisticPlant, ...currentPlants]);
+
+    const { data, error } = await supabase
+      .from("plantas")
+      .insert({
+        nome: newPlant.name,
+        especie: newPlant.species,
+        rega_automatica: false,
+        frequencia_cuidado: newPlant.careFrequency,
+      })
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      return;
+    }
+
+    const savedPlant = plantDashboardFromRecord(data as PlantRecord);
+    setPlant(savedPlant);
+    setPlants((currentPlants) =>
+      currentPlants.map((currentPlant) =>
+        currentPlant.id === optimisticPlant.id ? savedPlant : currentPlant,
+      ),
+    );
+  }, []);
+
   return useMemo(
-    () => ({ plant, plants, isLoading, refresh, toggleAutomaticWatering }),
-    [plant, plants, isLoading, refresh, toggleAutomaticWatering],
+    () => ({
+      plant,
+      plants,
+      isLoading,
+      refresh,
+      toggleAutomaticWatering,
+      addPlant,
+    }),
+    [plant, plants, isLoading, refresh, toggleAutomaticWatering, addPlant],
   );
 }
