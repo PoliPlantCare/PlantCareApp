@@ -34,7 +34,7 @@ const PLANT_CARD_WIDTH = IS_COMPACT
 const HEADER_HEIGHT = IS_COMPACT ? 132 : 156;
 const BOTTOM_NAV_HEIGHT = IS_COMPACT ? 84 : 100;
 type TabName = "home" | "plants";
-type ScreenName = "dashboard" | "addPlant" | "editPlant";
+type ScreenName = "dashboard" | "addPlant" | "editPlant" | "settingsPlant";
 
 function BrandHeader() {
   return (
@@ -104,6 +104,7 @@ function PlantCard({
   updatedMinutes: number;
   automaticWatering: boolean;
   onToggle: () => void;
+  onSettings: () => void;
 }) {
   return (
     <View style={styles.plantCard}>
@@ -126,7 +127,7 @@ function PlantCard({
             Rega Automática
           </Text>
         </View>
-        <Pressable accessibilityRole="button" style={styles.settingsButton}>
+        <Pressable accessibilityRole="button" style={styles.settingsButton} onPress={onSettings}>
           <GearIcon />
         </Pressable>
       </View>
@@ -308,11 +309,17 @@ function BottomNav({
 function DashboardContent({
   plant,
   isLoading,
+  isWatering,
   toggleAutomaticWatering,
+  triggerManualWatering,
+  onOpenSettings,
 }: {
   plant: PlantDashboard;
   isLoading: boolean;
+  isWatering: boolean;
   toggleAutomaticWatering: () => void;
+  triggerManualWatering: () => void;
+  onOpenSettings: () => void;
 }) {
   return (
     <View style={styles.dashboardRoot}>
@@ -338,7 +345,18 @@ function DashboardContent({
               updatedMinutes={plant.lastUpdatedMinutes}
               automaticWatering={plant.automaticWatering}
               onToggle={toggleAutomaticWatering}
+              onSettings={onOpenSettings}
             />
+          </View>
+          <View style={styles.waterNowContainer}>
+            <Pressable 
+              accessibilityRole="button" 
+              style={[styles.waterNowButton, isWatering && styles.waterNowButtonDisabled]}
+              onPress={triggerManualWatering}
+              disabled={isWatering}
+            >
+              <Text style={styles.waterNowText}>{isWatering ? "Regando a planta..." : "Regar Agora (Manual)"}</Text>
+            </Pressable>
           </View>
           {isLoading && (
             <Text style={styles.loadingText}>
@@ -658,7 +676,9 @@ export function HomeScreen() {
     plant,
     plants,
     isLoading,
+    isWatering,
     toggleAutomaticWatering,
+    triggerManualWatering,
     selectPlant,
     addPlant,
     updatePlant,
@@ -727,7 +747,10 @@ export function HomeScreen() {
         <DashboardContent
           plant={plant}
           isLoading={isLoading}
+          isWatering={isWatering}
           toggleAutomaticWatering={toggleAutomaticWatering}
+          triggerManualWatering={triggerManualWatering}
+          onOpenSettings={() => setScreen("settingsPlant")}
         />
       ) : (
         <PlantsContent
@@ -1034,6 +1057,30 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     position: "relative",
+    top: -24,
+  },
+  waterNowContainer: {
+    paddingHorizontal: CONTENT_PADDING,
+    paddingBottom: 24,
+  },
+  waterNowButton: {
+    backgroundColor: MINT,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  waterNowButtonDisabled: {
+    backgroundColor: '#88ceb3',
+  },
+  waterNowText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 16,
   },
   sensorIcon: {
     fontSize: IS_COMPACT ? 34 : 40,
