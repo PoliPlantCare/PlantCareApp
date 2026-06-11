@@ -34,7 +34,7 @@ const PLANT_CARD_WIDTH = IS_COMPACT
 const HEADER_HEIGHT = IS_COMPACT ? 132 : 156;
 const BOTTOM_NAV_HEIGHT = IS_COMPACT ? 84 : 100;
 type TabName = "home" | "plants";
-type ScreenName = "dashboard" | "addPlant";
+type ScreenName = "dashboard" | "addPlant" | "editPlant";
 
 function BrandHeader() {
   return (
@@ -361,9 +361,24 @@ function CategoryPill({ label }: { label: string }) {
   );
 }
 
-function PlantListItem({ plant }: { plant: PlantDashboard }) {
+function PlantListItem({
+  plant,
+  isSelected,
+  onSelect,
+  onEdit,
+}: {
+  plant: PlantDashboard;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit: () => void;
+}) {
   return (
-    <View style={styles.plantListItem}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
+      onPress={onSelect}
+      style={[styles.plantListItem, isSelected && styles.plantListItemSelected]}
+    >
       <Image
         source={{ uri: plant.imageUrl }}
         style={styles.plantListImage}
@@ -376,7 +391,9 @@ function PlantListItem({ plant }: { plant: PlantDashboard }) {
           </Text>
           <View style={styles.plantListActions}>
             <Text style={styles.listActionIcon}>ⓘ</Text>
-            <Text style={styles.listActionIcon}>✎</Text>
+            <Pressable accessibilityRole="button" onPress={onEdit} hitSlop={8}>
+              <Text style={styles.listActionIcon}>✎</Text>
+            </Pressable>
           </View>
         </View>
         <View style={styles.listSpeciesPill}>
@@ -389,15 +406,21 @@ function PlantListItem({ plant }: { plant: PlantDashboard }) {
           <Text style={styles.listHealthText}>{plant.healthLabel}</Text>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 function PlantsContent({
   plants,
+  selectedPlantId,
+  onSelectPlant,
+  onEditPlant,
   onAddPlant,
 }: {
   plants: PlantDashboard[];
+  selectedPlantId: string;
+  onSelectPlant: (plantId: string) => void;
+  onEditPlant: (plant: PlantDashboard) => void;
   onAddPlant: () => void;
 }) {
   return (
@@ -431,7 +454,13 @@ function PlantsContent({
         </View>
         <View style={styles.listContent}>
           {plants.map((plant) => (
-            <PlantListItem key={plant.id} plant={plant} />
+            <PlantListItem
+              key={plant.id}
+              plant={plant}
+              isSelected={plant.id === selectedPlantId}
+              onSelect={() => onSelectPlant(plant.id)}
+              onEdit={() => onEditPlant(plant)}
+            />
           ))}
           <Text style={styles.emptyHint}>
             As plantas que você registra{"\n"}aparecem aqui
@@ -483,16 +512,22 @@ function SpeciesOption({
 }
 
 function AddPlantScreen({
+  initialPlant,
   onBack,
   onSubmit,
+  onDelete,
 }: {
+  initialPlant?: PlantDashboard;
   onBack: () => void;
   onSubmit: (plant: NewPlantInput) => void;
+  onDelete?: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [species, setSpecies] = useState("Orquídea");
-  const [careFrequency, setCareFrequency] =
-    useState<PlantCareFrequency>("frequent");
+  const isEditing = Boolean(initialPlant);
+  const [name, setName] = useState(initialPlant?.name ?? "");
+  const [species, setSpecies] = useState(initialPlant?.species ?? "Orquídea");
+  const [careFrequency, setCareFrequency] = useState<PlantCareFrequency>(
+    initialPlant?.careFrequency ?? "frequent",
+  );
 
   const canSubmit = name.trim().length > 0;
 
@@ -525,11 +560,12 @@ function AddPlantScreen({
       >
         <SeedlingIcon />
         <Text style={styles.addQuestion}>
-          Como você quer chamar sua planta?
+          {isEditing ? "Editar planta" : "Como você quer chamar sua planta?"}
         </Text>
         <Text style={styles.addDescription}>
-          Esse é o nome pelo qual a sua planta será referida dentro do
-          aplicativo do PlantCare.
+          {isEditing
+            ? "Atualize as informações principais dessa planta."
+            : "Esse é o nome pelo qual a sua planta será referida dentro do aplicativo do PlantCare."}
         </Text>
         <TextInput
           value={name}
@@ -586,6 +622,15 @@ function AddPlantScreen({
           <Text style={styles.frequencyButtonText}>Quero baixa manutenção</Text>
         </Pressable>
       </ScrollView>
+      {onDelete && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onDelete}
+          style={styles.deletePlantButton}
+        >
+          <Text style={styles.deletePlantButtonText}>Deletar planta</Text>
+        </Pressable>
+      )}
       <Pressable
         accessibilityRole="button"
         disabled={!canSubmit}
@@ -595,7 +640,9 @@ function AddPlantScreen({
           !canSubmit && styles.continueButtonDisabled,
         ]}
       >
-        <Text style={styles.continueButtonText}>Continuar</Text>
+        <Text style={styles.continueButtonText}>
+          {isEditing ? "Salvar alterações" : "Continuar"}
+        </Text>
       </Pressable>
     </View>
   );
@@ -604,8 +651,19 @@ function AddPlantScreen({
 export function HomeScreen() {
   const [activeTab, setActiveTab] = useState<TabName>("home");
   const [screen, setScreen] = useState<ScreenName>("dashboard");
-  const { plant, plants, isLoading, toggleAutomaticWatering, addPlant } =
-    usePlantDashboard();
+  const [editingPlant, setEditingPlant] = useState<
+    PlantDashboard | undefined
+  >();
+  const {
+    plant,
+    plants,
+    isLoading,
+    toggleAutomaticWatering,
+    selectPlant,
+    addPlant,
+    updatePlant,
+    deletePlant,
+  } = usePlantDashboard();
 
   const handleAddPlant = async (newPlant: NewPlantInput) => {
     await addPlant(newPlant);
@@ -613,11 +671,52 @@ export function HomeScreen() {
     setScreen("dashboard");
   };
 
+  const handleOpenEditPlant = (plantToEdit: PlantDashboard) => {
+    setEditingPlant(plantToEdit);
+    setScreen("editPlant");
+  };
+
+  const handleUpdatePlant = async (plantUpdate: NewPlantInput) => {
+    if (!editingPlant) {
+      return;
+    }
+
+    await updatePlant(editingPlant.id, plantUpdate);
+    setActiveTab("plants");
+    setScreen("dashboard");
+    setEditingPlant(undefined);
+  };
+
+  const handleDeletePlant = async () => {
+    if (!editingPlant) {
+      return;
+    }
+
+    await deletePlant(editingPlant.id);
+    setActiveTab("plants");
+    setScreen("dashboard");
+    setEditingPlant(undefined);
+  };
+
   if (screen === "addPlant") {
     return (
       <AddPlantScreen
         onBack={() => setScreen("dashboard")}
         onSubmit={handleAddPlant}
+      />
+    );
+  }
+
+  if (screen === "editPlant" && editingPlant) {
+    return (
+      <AddPlantScreen
+        initialPlant={editingPlant}
+        onBack={() => {
+          setScreen("dashboard");
+          setEditingPlant(undefined);
+        }}
+        onSubmit={handleUpdatePlant}
+        onDelete={handleDeletePlant}
       />
     );
   }
@@ -633,6 +732,9 @@ export function HomeScreen() {
       ) : (
         <PlantsContent
           plants={plants}
+          selectedPlantId={plant.id}
+          onSelectPlant={selectPlant}
+          onEditPlant={handleOpenEditPlant}
           onAddPlant={() => setScreen("addPlant")}
         />
       )}
@@ -1036,6 +1138,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     flexDirection: "row",
     marginBottom: IS_COMPACT ? 5 : 22,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  plantListItemSelected: {
+    backgroundColor: "#e8f5ee",
+    borderColor: "#2fa36f",
   },
   plantListImage: {
     width: IS_COMPACT ? 82 : 296,
@@ -1265,7 +1373,7 @@ const styles = StyleSheet.create({
   addScreenContent: {
     paddingHorizontal: IS_COMPACT ? 28 : 34,
     paddingTop: IS_COMPACT ? 104 : 118,
-    paddingBottom: 140,
+    paddingBottom: 220,
     alignItems: "center",
   },
   addBackButton: {
@@ -1378,6 +1486,22 @@ const styles = StyleSheet.create({
     fontSize: IS_COMPACT ? 22 : 27,
     fontWeight: "700",
     textAlign: "center",
+  },
+  deletePlantButton: {
+    position: "absolute",
+    left: IS_COMPACT ? 26 : 34,
+    right: IS_COMPACT ? 26 : 34,
+    bottom: IS_COMPACT ? 98 : 126,
+    height: IS_COMPACT ? 58 : 72,
+    borderRadius: IS_COMPACT ? 29 : 36,
+    backgroundColor: "#bd3f40",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deletePlantButtonText: {
+    color: "#ffffff",
+    fontSize: IS_COMPACT ? 24 : 28,
+    fontWeight: "700",
   },
   continueButton: {
     position: "absolute",

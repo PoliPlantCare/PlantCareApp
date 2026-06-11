@@ -35,6 +35,7 @@ export type PlantDashboard = {
   species: string;
   lastUpdatedMinutes: number;
   automaticWatering: boolean;
+  careFrequency: PlantCareFrequency;
   healthLabel: string;
   imageUrl: string;
   sensors: SensorReading[];

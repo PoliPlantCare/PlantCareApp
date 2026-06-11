@@ -23,6 +23,7 @@ const fallbackPlant: PlantDashboard = {
   species: "Orquídea",
   lastUpdatedMinutes: 0,
   automaticWatering: false,
+  careFrequency: "frequent",
   healthLabel: "Saudável",
   imageUrl: DEFAULT_IMAGE_URL,
   sensors: [
@@ -84,6 +85,15 @@ const fallbackPlants: PlantDashboard[] = [
 ];
 
 const createLocalPlantId = () => `local-${Date.now()}`;
+
+const isLocalPlant = (plantId: string) =>
+  plantId.startsWith("local-") || plantId.startsWith("demo-");
+
+const careFrequencyFromRecord = (plantRecord: PlantRecord) => {
+  const frequency =
+    plantRecord.frequencia_cuidado ?? plantRecord.care_frequency;
+  return frequency === "low" ? "low" : "frequent";
+};
 
 type PlantRecord = {
   id: string;
@@ -344,6 +354,7 @@ const plantDashboardFromRecord = (
       plantRecord.rega_automatica ??
       plantRecord.automatic_watering ??
       fallbackPlant.automaticWatering,
+    careFrequency: careFrequencyFromRecord(plantRecord),
     imageUrl: imageForSpecies(species, plantRecord.image_url),
     lastUpdatedMinutes: formatElapsedMinutes(latestCreatedAt),
     healthLabel: "Saudável",
@@ -362,6 +373,7 @@ const plantDashboardFromInput = (
   species: newPlant.species,
   imageUrl: imageForSpecies(newPlant.species),
   automaticWatering: false,
+  careFrequency: newPlant.careFrequency,
   detailCards: buildDetailCards(fallbackPlant.sensors),
 });
 
@@ -381,8 +393,6 @@ export function usePlantDashboard() {
     const plantRecord = parsedPlantRecords[0];
 
     if (!plantRecord) {
-      setPlant(fallbackPlant);
-      setPlants(fallbackPlants);
       setIsLoading(false);
       return;
     }
@@ -394,17 +404,36 @@ export function usePlantDashboard() {
       .limit(24);
 
     const latestReadings = (readings ?? []) as ReadingRecord[];
-    const dashboardPlant = plantDashboardFromRecord(
-      plantRecord,
-      latestReadings,
+    const dashboardPlants = parsedPlantRecords.map((record, index) =>
+      plantDashboardFromRecord(record, index === 0 ? latestReadings : []),
     );
 
-    setPlant(dashboardPlant);
-    setPlants(
-      parsedPlantRecords.map((record, index) =>
-        plantDashboardFromRecord(record, index === 0 ? latestReadings : []),
-      ),
-    );
+    setPlants((currentPlants) => {
+      const localPlants = currentPlants.filter((currentPlant) =>
+        currentPlant.id.startsWith("local-"),
+      );
+      const remotePlantIds = new Set(
+        dashboardPlants.map((dashboardPlant) => dashboardPlant.id),
+      );
+      const unsavedLocalPlants = localPlants.filter(
+        (localPlant) => !remotePlantIds.has(localPlant.id),
+      );
+
+      return [...unsavedLocalPlants, ...dashboardPlants];
+    });
+    setPlant((currentPlant) => {
+      const refreshedSelectedPlant = dashboardPlants.find(
+        (dashboardPlant) => dashboardPlant.id === currentPlant.id,
+      );
+
+      if (refreshedSelectedPlant) {
+        return refreshedSelectedPlant;
+      }
+
+      return currentPlant.id.startsWith("local-")
+        ? currentPlant
+        : dashboardPlants[0];
+    });
 
     setIsLoading(false);
   }, []);
@@ -445,7 +474,7 @@ export function usePlantDashboard() {
       ),
     );
 
-    if (plant.id === fallbackPlant.id || plant.id.startsWith("local-")) {
+    if (isLocalPlant(plant.id)) {
       return;
     }
 
@@ -468,6 +497,92 @@ export function usePlantDashboard() {
       );
     }
   }, [plant.automaticWatering, plant.id]);
+
+  const selectPlant = useCallback(
+    (plantId: string) => {
+      const selectedPlant = plants.find(
+        (currentPlant) => currentPlant.id === plantId,
+      );
+
+      if (selectedPlant) {
+        setPlant(selectedPlant);
+      }
+    },
+    [plants],
+  );
+
+  const updatePlant = useCallback(
+    async (plantId: string, plantUpdate: NewPlantInput) => {
+      const previousPlant = plants.find(
+        (currentPlant) => currentPlant.id === plantId,
+      );
+
+      if (!previousPlant) {
+        return;
+      }
+
+      const updatedPlant: PlantDashboard = {
+        ...previousPlant,
+        name: plantUpdate.name,
+        species: plantUpdate.species,
+        careFrequency: plantUpdate.careFrequency,
+        imageUrl: imageForSpecies(plantUpdate.species),
+      };
+
+      setPlant((currentPlant) =>
+        currentPlant.id === plantId ? updatedPlant : currentPlant,
+      );
+      setPlants((currentPlants) =>
+        currentPlants.map((currentPlant) =>
+          currentPlant.id === plantId ? updatedPlant : currentPlant,
+        ),
+      );
+
+      if (isLocalPlant(plantId)) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from("plantas")
+        .update({
+          nome: plantUpdate.name,
+          especie: plantUpdate.species,
+          frequencia_cuidado: plantUpdate.careFrequency,
+        })
+        .eq("id", plantId);
+
+      if (error) {
+        setPlant((currentPlant) =>
+          currentPlant.id === plantId ? previousPlant : currentPlant,
+        );
+        setPlants((currentPlants) =>
+          currentPlants.map((currentPlant) =>
+            currentPlant.id === plantId ? previousPlant : currentPlant,
+          ),
+        );
+      }
+    },
+    [plants],
+  );
+
+  const deletePlant = useCallback(
+    async (plantId: string) => {
+      const remainingPlants = plants.filter(
+        (currentPlant) => currentPlant.id !== plantId,
+      );
+      const nextPlant = remainingPlants[0] ?? fallbackPlant;
+
+      setPlants(remainingPlants);
+      setPlant(plant.id === plantId ? nextPlant : plant);
+
+      if (isLocalPlant(plantId)) {
+        return;
+      }
+
+      await supabase.from("plantas").delete().eq("id", plantId);
+    },
+    [plant, plants],
+  );
 
   const addPlant = useCallback(async (newPlant: NewPlantInput) => {
     const optimisticPlant = plantDashboardFromInput(newPlant);
@@ -506,8 +621,21 @@ export function usePlantDashboard() {
       isLoading,
       refresh,
       toggleAutomaticWatering,
+      selectPlant,
       addPlant,
+      updatePlant,
+      deletePlant,
     }),
-    [plant, plants, isLoading, refresh, toggleAutomaticWatering, addPlant],
+    [
+      plant,
+      plants,
+      isLoading,
+      refresh,
+      toggleAutomaticWatering,
+      selectPlant,
+      addPlant,
+      updatePlant,
+      deletePlant,
+    ],
   );
 }
