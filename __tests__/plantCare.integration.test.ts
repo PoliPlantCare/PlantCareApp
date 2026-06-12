@@ -24,6 +24,7 @@ test("integra cadastro, perfil de espécie e payload de horários para o PlantCa
   assert.equal(plant.locationType, "outdoor");
   assert.equal(plant.sunExposure, "full");
   assert.equal(plant.moistureMin, 30);
+  assert.equal(plant.moistureMax, 65);
   assert.deepEqual(payload, { horarios: [{ on: "07:00", off: "07:08" }] });
 });
 
