@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Dimensions,
   Image,
@@ -8,6 +8,10 @@ import {
   Text,
   TextInput,
   View,
+  Animated,
+  PanResponder,
+  Modal,
+  SafeAreaView,
 } from "react-native";
 import { usePlantDashboard } from "../hooks/usePlantDashboard";
 import { atualizarConfig, atualizarHorarios } from "../lib/api";
@@ -310,17 +314,129 @@ function HistoryPanel({
 }
 
 function DetailedSheet({ cards }: { cards: DetailCard[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const screenHeight = Dimensions.get('window').height;
+  const panY = useRef(new Animated.Value(screenHeight)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const openSheet = () => {
+    panY.setValue(screenHeight);
+    fadeAnim.setValue(0);
+    setExpanded(true);
+    Animated.parallel([
+      Animated.spring(panY, {
+        toValue: 0,
+        useNativeDriver: false,
+        bounciness: 0,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      })
+    ]).start();
+  };
+
+  const closeSheet = () => {
+    Animated.parallel([
+      Animated.timing(panY, {
+        toValue: screenHeight,
+        duration: 250,
+        useNativeDriver: false,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: false,
+      })
+    ]).start(() => {
+      setExpanded(false);
+    });
+  };
+
+  const collapsedPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderRelease: (e, gestureState) => {
+        if (gestureState.dy < -10 || gestureState.vy < -0.5) {
+          openSheet();
+        } else if (Math.abs(gestureState.dx) < 10 && Math.abs(gestureState.dy) < 10) {
+          openSheet();
+        }
+      }
+    })
+  ).current;
+
+  const sheetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (e, gestureState) => gestureState.dy > 5,
+      onPanResponderGrant: () => {
+        panY.extractOffset();
+      },
+      onPanResponderMove: Animated.event([null, { dy: panY }], { useNativeDriver: false }),
+      onPanResponderRelease: (e, gestureState) => {
+        panY.flattenOffset();
+        if (gestureState.dy > 50 || gestureState.vy > 0.5) {
+          closeSheet();
+        } else {
+          Animated.spring(panY, {
+            toValue: 0,
+            useNativeDriver: false,
+            bounciness: 0,
+          }).start();
+        }
+      }
+    })
+  ).current;
+
+  const translateY = panY.interpolate({
+    inputRange: [0, screenHeight],
+    outputRange: [0, screenHeight],
+    extrapolate: 'clamp',
+  });
+
   return (
-    <View style={styles.detailSheet}>
-      <View style={styles.detailHandle} />
-      <Text style={styles.detailTitle}>Vista Detalhada</Text>
-      <View style={styles.detailDivider} />
-      <View style={styles.detailGrid}>
-        {cards.map((card) => (
-          <DetailedMetricCard key={card.id} card={card} />
-        ))}
-      </View>
-    </View>
+    <>
+      <Animated.View 
+        style={styles.detailSheetCollapsed}
+        {...collapsedPanResponder.panHandlers}
+      >
+        <View style={styles.detailHandle} />
+        <Text style={styles.detailTitle}>Vista Detalhada</Text>
+      </Animated.View>
+
+      <Modal
+        visible={expanded}
+        animationType="none"
+        transparent={true}
+        onRequestClose={closeSheet}
+      >
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)', opacity: fadeAnim }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
+        </Animated.View>
+        <SafeAreaView style={styles.detailSheetModalContainer} pointerEvents="box-none">
+           <Animated.View 
+             style={[
+               styles.detailSheetExpanded,
+               { transform: [{ translateY }] }
+             ]}
+             {...sheetPanResponder.panHandlers}
+           >
+             <View style={styles.detailHandle} />
+             <Text style={styles.detailTitle}>Vista Detalhada</Text>
+             <View style={styles.detailDivider} />
+             <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+               <View style={styles.detailGrid}>
+                 {cards.map((card) => (
+                   <DetailedMetricCard key={card.id} card={card} />
+                 ))}
+               </View>
+             </ScrollView>
+           </Animated.View>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 }
 
@@ -457,13 +573,13 @@ function DashboardContent({
           )}
           <StatusCard sensors={plant.sensors} healthLabel={plant.healthLabel} />
           <AlertsPanel alerts={plant.alerts} />
-          <DetailedSheet cards={plant.detailCards} />
           <HistoryPanel
             sensorHistory={plant.sensorHistory}
             wateringHistory={plant.wateringHistory}
           />
         </View>
       </ScrollView>
+      <DetailedSheet cards={plant.detailCards} />
     </View>
   );
 }
@@ -1100,7 +1216,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: BOTTOM_NAV_HEIGHT + 26,
+    paddingBottom: BOTTOM_NAV_HEIGHT + 110,
     backgroundColor: BACKGROUND,
   },
   header: {
@@ -1686,6 +1802,36 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 12,
     marginBottom: 6,
+  },
+  detailSheetCollapsed: {
+    position: "absolute",
+    bottom: BOTTOM_NAV_HEIGHT,
+    left: 0,
+    right: 0,
+    zIndex: 5,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: "#ffffff",
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  detailSheetModalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  detailSheetExpanded: {
+    maxHeight: "90%",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: IS_COMPACT ? 18 : 24,
+    paddingTop: 12,
+    paddingBottom: BOTTOM_NAV_HEIGHT + 24,
+    shadowColor: "#000000",
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 10,
   },
   detailSheet: {
     marginHorizontal: CONTENT_PADDING + 4,
