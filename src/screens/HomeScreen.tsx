@@ -1,32 +1,32 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useState } from "react";
 import {
+  Animated,
   Dimensions,
   Image,
+  Modal,
+  PanResponder,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
-  Animated,
-  PanResponder,
-  Modal,
-  SafeAreaView,
 } from "react-native";
 import { usePlantDashboard } from "../hooks/usePlantDashboard";
 import { atualizarConfig, atualizarHorarios } from "../lib/api";
 import type {
   DetailCard,
   NewPlantInput,
-  PlantCareFrequency,
-  PlantLocationType,
-  SunExposure,
-  WateringWindow,
   PlantAlert,
+  PlantCareFrequency,
   PlantDashboard,
+  PlantLocationType,
   SensorHistoryEntry,
   SensorReading,
+  SunExposure,
   WateringHistoryEntry,
+  WateringWindow,
 } from "../types/plant";
 
 const GREEN = "#2d624a";
@@ -1445,7 +1445,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: "#ffffff",
     paddingHorizontal: IS_COMPACT ? 16 : 24,
-    marginTop: IS_COMPACT ? 30 : 36,
+    marginTop: IS_COMPACT ? 11 : 14,
     paddingTop: 14,
     paddingBottom: 22,
     shadowColor: "#000000",
@@ -1493,11 +1493,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     position: "relative",
-    top: -24,
+    top: 0,
   },
   waterNowContainer: {
     paddingHorizontal: CONTENT_PADDING,
-    paddingBottom: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   waterNowButton: {
     backgroundColor: MINT,
