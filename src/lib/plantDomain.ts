@@ -249,7 +249,7 @@ export const calcularHorasProximaRega = (
   referenceDate = new Date(),
 ) => {
   const currentMinutes =
-    referenceDate.getHours() * 60 + referenceDate.getMinutes();
+    referenceDate.getUTCHours() * 60 + referenceDate.getUTCMinutes();
   const nextWindow = wateringWindows
     .map((window) => {
       const [hour, minute] = window.on.split(":").map(Number);
