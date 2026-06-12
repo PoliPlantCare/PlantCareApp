@@ -1,11 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dashboardFromInput, dashboardFromRecord } from "../src/lib/plantDomain.ts";
+import {
+  dashboardFromInput,
+  dashboardFromPlantUpdate,
+  dashboardFromRecord,
+} from "../src/lib/plantDomain.ts";
 import {
   criarPayloadHorarios,
   criarRegistroRegaManual,
 } from "../src/lib/plantServerPayloads.ts";
-import type { NewPlantInput, SensorHistoryEntry, WateringHistoryEntry } from "../src/types/plant.ts";
+import type {
+  NewPlantInput,
+  SensorHistoryEntry,
+  WateringHistoryEntry,
+} from "../src/types/plant.ts";
 
 test("integra cadastro, perfil de espécie e payload de horários para o PlantCareServer", () => {
   const input: NewPlantInput = {
@@ -60,6 +68,69 @@ test("integra leituras remotas segmentadas, histórico de rega e alertas do dash
   assert.ok(dashboard.detailCards.some((card) => card.id === "last-watering"));
   assert.equal(dashboard.sensorHistory.length, 4);
   assert.equal(dashboard.wateringHistory[0].mode, "manual");
+});
+
+test("preserva leituras remotas ao editar uma planta existente", () => {
+  const sensorHistory: SensorHistoryEntry[] = [
+    {
+      id: "temp-row",
+      type: "temperature",
+      label: "Temperatura",
+      value: 29,
+      unit: "°C",
+      status: "good",
+      createdAt: "2026-06-11T10:19:00.000Z",
+    },
+    {
+      id: "light-row",
+      type: "light",
+      label: "Luminosidade",
+      value: 1800,
+      unit: "lux",
+      status: "good",
+      createdAt: "2026-06-11T10:18:00.000Z",
+    },
+  ];
+  const previousDashboard = dashboardFromRecord(
+    {
+      id: "demo-orquidea",
+      nome: "Sua Planta",
+      especie: "Orquídea",
+    },
+    sensorHistory,
+    [],
+  );
+  const editedInput: NewPlantInput = {
+    name: "Orquídea editada",
+    species: "Orquídea",
+    careFrequency: "frequent",
+    locationType: "indoor",
+    sunExposure: "shade",
+    wateringWindows: [{ id: "orquidea-1", on: "08:00", off: "08:05" }],
+  };
+
+  const editedDashboard = dashboardFromPlantUpdate(
+    previousDashboard,
+    editedInput,
+  );
+
+  assert.equal(editedDashboard.name, "Orquídea editada");
+  assert.equal(
+    editedDashboard.sensors.find((sensor) => sensor.label === "Temperatura")
+      ?.value,
+    "29°C",
+  );
+  assert.equal(
+    editedDashboard.sensors.find((sensor) => sensor.label === "Luminosidade")
+      ?.value,
+    "1.800",
+  );
+  assert.equal(
+    editedDashboard.detailCards.find((card) => card.id === "temperature")
+      ?.value,
+    "29°C",
+  );
+  assert.equal(editedDashboard.sensorHistory.length, 2);
 });
 
 test("integra registro de rega manual no formato esperado pelo histórico do servidor", () => {
