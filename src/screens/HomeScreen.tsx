@@ -6,13 +6,13 @@ import {
   Modal,
   PanResponder,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlantDashboard } from "../hooks/usePlantDashboard";
 import { atualizarConfig, atualizarHorarios } from "../lib/api";
 import type {
