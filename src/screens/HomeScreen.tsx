@@ -992,10 +992,14 @@ export function HomeScreen() {
     deletePlant,
   } = usePlantDashboard();
 
-  const handleAddPlant = async (newPlant: NewPlantInput) => {
-    await addPlant(newPlant);
+  const handleAddPlant = (newPlant: NewPlantInput) => {
     setActiveTab("plants");
     setScreen("dashboard");
+
+    void addPlant(newPlant).catch((error) => {
+      console.warn("Falha ao criar planta.", error);
+      alert("Não foi possível sincronizar a nova planta. Tente novamente.");
+    });
   };
 
   const handleOpenEditPlant = (plantToEdit: PlantDashboard) => {
